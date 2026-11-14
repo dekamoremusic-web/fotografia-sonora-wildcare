@@ -1,0 +1,750 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Fotografia sonora"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#ECEEEB"></head><body><title>Fotografia sonora</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: una card per schermata, stile sondaggio per mobile; barra di avanzamento in alto, navigazione fissa in basso */
+:root{
+  --bg:#ECEEEB; --panel:#FFFFFF; --ink:#15171C; --muted:#4F555C; --line:#CDD1CC; --soft:#F4F5F3;
+  --ton:#6B3FD9; --ton-t:#EEE8FC; --seg:#C2620F; --seg-t:#FDEDDD; --imp:#127A70; --imp-t:#D9F3F0; --cmp:#15171C; --cmp-t:#E4E7E3;
+  --wave:#A2A8A1; --warn:#9A3412;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111311; --panel:#1B1E1B; --ink:#E9ECE9; --muted:#A7AEA7; --line:#363B36; --soft:#232723;
+  --ton:#B79CFF; --ton-t:#2A2342; --seg:#F4A35A; --seg-t:#3A2919; --imp:#5ED6C9; --imp-t:#14332F; --cmp:#E9ECE9; --cmp-t:#2A2E2A;
+  --wave:#5D655D; --warn:#F4A877; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111311; --panel:#1B1E1B; --ink:#E9ECE9; --muted:#A7AEA7; --line:#363B36; --soft:#232723;
+  --ton:#B79CFF; --ton-t:#2A2342; --seg:#F4A35A; --seg-t:#3A2919; --imp:#5ED6C9; --imp-t:#14332F; --cmp:#E9ECE9; --cmp-t:#2A2E2A;
+  --wave:#5D655D; --warn:#F4A877; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45}
+.app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 0;box-sizing:border-box}
+.top{display:flex;flex-direction:column;gap:8px;padding-bottom:12px}
+.segs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.seg{display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;min-width:0}
+.seg i{display:block;height:4px;border-radius:2px;background:var(--line)}
+.seg.done i{background:var(--c)} .seg.now i{background:linear-gradient(90deg,var(--c) var(--p),var(--line) var(--p))}
+.seg.now{color:var(--ink)}
+.stepno{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 18px;display:flex;flex-direction:column;gap:16px;flex:1 0 auto;margin-bottom:12px}
+.tag{align-self:flex-start;display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);font-weight:500}
+.tag b{width:10px;height:10px;border-radius:2px;background:var(--acc)}
+h1{margin:0;font-size:34px;line-height:1.05;letter-spacing:-.01em;text-wrap:balance}
+h2{margin:0;font-size:23px;line-height:1.2;text-wrap:balance}
+p{margin:0}
+.sub{color:var(--muted);font-size:15px}
+.small{font-size:13px;color:var(--muted)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opts.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+button{font:inherit;color:inherit;cursor:pointer}
+.opt{text-align:left;background:var(--soft);border:1.5px solid var(--line);border-radius:12px;padding:14px;min-height:56px;display:flex;gap:12px;align-items:center;width:100%;box-sizing:border-box}
+.opt[aria-pressed="true"]{border-color:var(--acc);background:var(--tint);box-shadow:inset 0 0 0 1px var(--acc)}
+.opt .txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.opt .ttl{font-weight:600;font-size:16px;line-height:1.3}
+.opt .dsc{font-size:13.5px;color:var(--muted);line-height:1.35}
+.opt.shape{flex-direction:row;align-items:flex-start}
+.opt.shape svg{flex-shrink:0}
+.opt.busy{opacity:.55}
+.fx{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px}
+.fx span{border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:var(--panel)}
+.posture{display:flex;gap:10px;align-items:center;background:var(--tint);border-radius:10px;padding:10px 12px;font-size:14px}
+.posture svg{flex-shrink:0}
+.quote{border-left:3px solid var(--acc);padding:4px 0 4px 12px;font-size:16px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;min-height:46px;padding:10px 16px;border-radius:10px;border:1.5px solid var(--ink);background:transparent;font-weight:600;font-size:15px;line-height:1.2;text-align:center}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.acc{background:var(--acc);border-color:var(--acc);color:var(--bg)}
+.btn.ghost{border-color:var(--line);font-weight:500}
+.btn.wide{flex:1 1 0}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn svg{width:18px;height:18px}
+button:focus-visible,.btn:focus-within,input:focus-visible{outline:2px solid var(--acc,var(--ink));outline-offset:2px}
+.hidden-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+canvas{width:100%;height:64px;display:block;border-radius:8px;background:var(--soft)}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:52px}
+.switch input{width:22px;height:22px;accent-color:var(--acc)}
+.qblock{display:flex;flex-direction:column;gap:10px}
+.qblock h3{margin:0;font-size:17px}
+.part{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--soft)}
+.part .nm{font-weight:600}
+.part .act{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.part label{display:flex;gap:8px;align-items:center;font-size:14px;min-height:44px}
+.part .ctl{width:100%}
+.part .ctl label{min-height:0}
+.part.master{grid-template-columns:minmax(0,1fr);border-color:var(--ink)}
+.opts.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.opts.three .opt{padding:10px;flex-direction:column;align-items:flex-start}
+.part .act .btn{flex:1 1 0;min-width:0;padding:8px 6px;font-size:14px}
+.part.master .qblock{margin-bottom:6px}
+.btn.tog[aria-pressed="true"]{background:var(--tint);border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.part input{width:20px;height:20px;accent-color:var(--acc)}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.legend li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.legend li b{flex-shrink:0;width:12px;height:12px;border-radius:3px;margin-top:5px}
+.legend.shapes li{align-items:center}
+.nav{position:sticky;bottom:0;background:var(--bg);display:flex;gap:10px;padding-top:10px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.hint{font-size:12.5px;color:var(--muted);text-align:center;min-height:18px}
+.status{font-size:13px;color:var(--muted)} .status.warn{color:var(--warn)}
+dialog{border:none;padding:0;background:transparent;max-width:480px;width:100%;margin:auto auto 0;color:var(--ink)}
+dialog::backdrop{background:rgba(10,12,10,.45)}
+.sheet{background:var(--panel);border-radius:18px 18px 0 0;padding:18px max(18px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:85vh;overflow:auto;box-sizing:border-box}
+.ctl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;font-size:14px}
+.ctl output{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ctl input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--acc);min-height:30px}
+.chain{display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:11.5px;background:var(--soft);border-radius:8px;padding:10px}
+.chain div::before{content:"→ ";color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app" id="app">
+  <div class="top">
+    <div class="segs" id="segs"></div>
+    <div class="stepno" id="stepno"></div>
+  </div>
+  <main class="card" id="card" aria-live="polite"></main>
+  <div class="hint" id="hint"></div>
+  <nav class="nav" aria-label="Navigazione">
+    <button class="btn ghost" id="back" type="button">Indietro</button>
+    <button class="btn primary wide" id="next" type="button">Avanti</button>
+  </nav>
+</div>
+
+<dialog id="sheet" aria-labelledby="sheet-title">
+  <div class="sheet" id="sheetBody"></div>
+</dialog>
+
+<script>
+(function(){
+'use strict';
+const SR = 44100;
+const IN_VIEWER = !!window.claude;
+let ctx = null;
+const $ = (id) => document.getElementById(id);
+
+/* ======================= DATI DEL PERCORSO ======================= */
+const SHAPES = { RG: '1,5 23,5 23,19 1,19', Q: '3,3 21,3 21,21 3,21', RP: '4,8 20,8 20,16 4,16', T: '12,2 22.5,21 1.5,21' };
+const POSTURE = {
+  4: { t: 'Ascolto seduto e diffuso', d: 'Siediti e resta fermo. Lascia arrivare il suono da ogni direzione, senza cercarne uno in particolare.' },
+  3: { t: 'Ascolto puntuale', d: 'Resta in piedi o in movimento. Scegli una direzione e avvicinati a una sola fonte.' }
+};
+const SEC = {
+  tonica: { n: 1, name: 'Tonica', acc: '--ton', def: 'lo sfondo continuo del luogo',
+    shapes: [
+      { id: 'rett', sides: 4, poly: 'RG', color: '#1f3a6b', card: 'Deep listening', tasks: ['Trova il suono di sottofondo: quello che suonava prima che arrivassi e suonerà dopo.', 'Trova il suono che domina questo luogo: il traffico, la folla, il brusio.'] },
+      { id: 'tri', sides: 3, poly: 'T', color: '#e07a1f', card: 'Movimento', tasks: ['Cammina finché non trovi un punto dove il rumore di fondo suona un po’ meglio che altrove. Registra da qui.'] } ],
+    base: 'Riverbero lungo, livello basso, meno alti (−10 dB)', baseFx: ['HP 40 Hz', 'LP 1,5 kHz', 'Riverbero 2,1 s', '−10 dB'],
+    q: 'Stiamo ascoltando la città, adesso proviamo a farla suonare. Che cosa ti suggerisce il suono che hai appena registrato?',
+    opts: [ { v: 'A', t: 'Un ripetersi a tratti ritmico', fx: ['Beat repeat', 'Reverb'] },
+            { v: 'B', t: 'Una massa densa che avvolge lo spazio', fx: ['Resonator'] },
+            { v: 'C', t: 'Una trama che si propaga costante come sfondo', fx: ['Granulator', 'Chorus'] } ],
+    delayToggle: true },
+  segnale: { n: 2, name: 'Segnale', acc: '--seg', def: 'ciò che emerge e chiama l’attenzione',
+    shapes: [
+      { id: 'quad', sides: 4, poly: 'Q', color: '#3f8f4f', card: 'Mappatura', tasks: ['Scegli qualcosa che si sente appena: il cigolio di una porta, il movimento di una foglia secca. Registra solo quello.'] },
+      { id: 'tri', sides: 3, poly: 'T', color: '#e07a1f', card: 'Uso del dispositivo', tasks: ['Fai scorrere lentamente il telefono su una superficie: mattone, tessuto, metallo, corteccia. Il suono è il contatto stesso con la materia.'] } ],
+    base: 'Medio-alti in evidenza, compressione', baseFx: ['HP 300 Hz', '+4 dB 2,5 kHz', 'Comp 4:1', 'Plate 15%', '−6 dB'],
+    q: 'Se il suono che hai appena registrato fosse uno strumento, quale sarebbe?',
+    opts: [ { v: 'A', t: 'Una percussione, qualcosa che si suona colpendolo', fx: ['Beat repeat', 'Transient shaper', 'Corpus membrana'] },
+            { v: 'B', t: 'Un fiato, qualcosa che suona con il passaggio dell’aria', fx: ['Soffio d’aria', 'Vibrato', 'Corpus tubo', 'Reverb a inviluppo lento'] },
+            { v: 'C', t: 'Una corda, qualcosa che suona per sfregamento o viene pizzicata', fx: ['Resonators: corde accordate', 'Cassa armonica'] } ],
+    delayToggle: true },
+  impronta: { n: 3, name: 'Impronta sonora', acc: '--imp', def: 'il suono che appartiene solo a questo posto',
+    shapes: [
+      { id: 'rett', sides: 4, poly: 'RP', color: '#6fa8dc', card: 'Memoria', tasks: ['C’è un suono che vuoi portare con te di questo luogo? Trova qualcosa che gli somigli e registralo prima che diventi solo un ricordo.'] },
+      { id: 'tri', sides: 3, poly: 'T', color: '#c8352b', card: 'Cura', tasks: ['Scegli un suono fragile: uno che si affievolisce, raro, che nessun altro sembra notare ma sembra stare solo qui.'] } ],
+    base: 'Asciutto e in primo piano: è la voce principale', baseFx: ['HP 90 Hz', 'Comp 2,5:1', 'Room 5%', '0 dB'],
+    q: 'L’ultimo suono che hai registrato sarà la firma sonora di questo posto. Che aspetto potrebbe avere?',
+    opts: [ { v: 'A', t: 'Una cometa sonora che solo i più attenti possono sentire', fx: ['Reverb ad attacco lentissimo', 'Scia shimmer +12', 'Feedback delay', 'Pan in transito'] },
+            { v: 'B', t: 'Un vortice che attira l’ascoltatore verso di lui', fx: ['Granulator', 'Phaser', 'Spirale: rotazione che accelera e si avvicina'] },
+            { v: 'C', t: 'Un vulcano che esplode', fx: ['Boato: ottava sotto + filtro che si apre', 'Inviluppo + beat repeat + overdrive leggero', 'Erosion'] } ],
+    delayToggle: false }
+};
+const KEYS = ['tonica', 'segnale', 'impronta'];
+const S = {
+  tonica:   { raw: null, name: '', shape: null, task: null, eff: null, mov: null, level: -10, wet: 0.6, mix: 0.7, mute: false, send: false, keep: true, proc: {}, pitch: {}, ver: 0 },
+  segnale:  { raw: null, name: '', shape: null, task: null, eff: null, mov: null, level: -6, wet: 0.15, mix: 0.65, mute: false, send: false, keep: true, proc: {}, pitch: {}, ver: 0 },
+  impronta: { raw: null, name: '', shape: null, task: null, eff: null, mov: null, level: 0, wet: 0.05, mix: 0.5, mute: false, send: false, keep: true, proc: {}, pitch: {}, ver: 0 }
+};
+/* master: temperatura finale e volume generale, regolati nel mixer */
+const M = { temp: null, vol: 0 };
+const TEMP = { neutro: { ls: 0, hs: 0, hf: 5000 }, caldo: { ls: 3, hs: -4, hf: 4500 }, freddo: { ls: -3, hs: 3, hf: 5000 } };
+const SEND = 0.35;
+const BREATH = { tonica: 14, segnale: 11, impronta: 17 };
+
+/* ======================= DSP OFFLINE ======================= */
+function rng(seed){ let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+function rms(x){ let s = 0; for (let i = 0; i < x.length; i++) s += x[i]*x[i]; return Math.sqrt(s/Math.max(1, x.length)); }
+function peak(x){ let p = 0; for (let i = 0; i < x.length; i++){ const a = Math.abs(x[i]); if (a > p) p = a; } return p; }
+function normalize(x, db){ const r = rms(x), p = peak(x); if (r < 1e-7) return x; const g = Math.min(Math.pow(10, db/20)/r, 0.95/p); for (let i = 0; i < x.length; i++) x[i] *= g; return x; }
+function makeLoopable(x, sec){ const f = Math.min(Math.floor(sec*SR), Math.floor(x.length/3)); if (f < 16) return x; const n = x.length - f, out = new Float32Array(n);
+  for (let i = 0; i < n; i++) out[i] = x[i]; for (let i = 0; i < f; i++){ const t = i/f; out[i] = x[i]*Math.sin(t*Math.PI/2) + x[n+i]*Math.cos(t*Math.PI/2); } return out; }
+function toBuffer(x){ const b = new AudioBuffer({ length: x.length, numberOfChannels: 1, sampleRate: SR }); b.copyToChannel(x, 0); return b; }
+function fft(re, im, inv){ const n = re.length;
+  for (let i = 1, j = 0; i < n; i++){ let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j){ let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+  for (let len = 2; len <= n; len <<= 1){ const ang = 2*Math.PI/len*(inv ? 1 : -1), h = len >> 1;
+    for (let k = 0; k < h; k++){ const wr = Math.cos(ang*k), wi = Math.sin(ang*k);
+      for (let i = k; i < n; i += len){ const b = i + h, tr = re[b]*wr - im[b]*wi, ti = re[b]*wi + im[b]*wr; re[b] = re[i] - tr; im[b] = im[i] - ti; re[i] += tr; im[i] += ti; } } }
+  if (inv) for (let i = 0; i < n; i++){ re[i] /= n; im[i] /= n; } }
+function dominantPitch(x, lo, hi){
+  const N = 16384, re = new Float64Array(N), im = new Float64Array(N), acc = new Float64Array(N/2), frames = Math.max(1, Math.min(8, Math.floor(x.length/N)));
+  for (let f = 0; f < frames; f++){ const off = Math.max(0, Math.floor((x.length - N)*(f + 0.5)/frames));
+    for (let i = 0; i < N; i++){ re[i] = (x[off + i] || 0)*(0.5 - 0.5*Math.cos(2*Math.PI*i/(N-1))); im[i] = 0; }
+    fft(re, im, false); for (let k = 0; k < N/2; k++) acc[k] += Math.hypot(re[k], im[k]); }
+  const a = Math.floor(70*N/SR), b = Math.ceil(2000*N/SR); let best = a, bv = 0, tot = 0;
+  for (let k = a; k <= b; k++){ tot += acc[k]; if (acc[k] > bv){ bv = acc[k]; best = k; } }
+  let f0 = best*SR/N; const clear = bv > 4*tot/(b - a + 1); if (!clear) f0 = 146.83;
+  while (f0 >= hi) f0 /= 2; while (f0 < lo) f0 *= 2; return { f0, clear };
+}
+function findPeaks(x, r){
+  const hop = 512, nf = Math.floor(x.length/hop), env = new Float32Array(nf);
+  for (let f = 0; f < nf; f++){ let s = 0; for (let i = 0; i < hop; i++){ const v = x[f*hop + i]; s += v*v; } env[f] = Math.sqrt(s/hop); }
+  let m = 0; for (const v of env) m += v; m /= Math.max(1, nf); let sd = 0; for (const v of env) sd += (v - m)*(v - m); sd = Math.sqrt(sd/Math.max(1, nf));
+  const pk = []; for (let f = 6; f < nf - 6; f++){ if (env[f] < m + 0.5*sd) continue; let ok = true; for (let k = -6; k <= 6; k++) if (env[f+k] > env[f]){ ok = false; break; } if (ok) pk.push(Math.max(0, f*hop - Math.floor(0.01*SR))); }
+  while (pk.length < 4) pk.push(Math.floor(r()*Math.max(1, x.length - SR))); return pk;
+}
+/* Beat repeat: ripete porzioni dei picchi su una griglia; opzioni per gate, guadagno, altezza e bit crush */
+function beatRepeat(x, o){
+  const r = rng(o.seed || 1), pk = findPeaks(x, r), beat = 60/o.bpm, n = Math.max(x.length, Math.floor((o.minSec || 8)*SR)), out = new Float32Array(n), fade = Math.floor(0.004*SR);
+  for (let t = 0; (t + beat)*SR <= n; t += beat){
+    const p = t*SR/n, ch = typeof o.chance === 'function' ? o.chance(p) : o.chance; if (r() > ch) continue;
+    const start = pk[Math.floor(r()*pk.length)], div = (o.divAlt && r() < 0.35) ? o.divAlt : o.div;
+    const slice = Math.floor(beat/div*SR), reps = Math.max(1, Math.round(beat*SR/slice)); let g = o.g0 || 1;
+    for (let rep = 0; rep < reps; rep++){
+      const rate = 1 + (o.rateStep == null ? -0.025 : o.rateStep)*rep, off = Math.floor(t*SR) + rep*slice;
+      for (let i = 0; i < slice && off + i < n; i++){
+        const ii = o.crush ? i - (i % 6) : i, sp = start + ii*rate, i0 = Math.floor(sp), fr = sp - i0;
+        let v = x[i0 % x.length]*(1 - fr) + x[(i0 + 1) % x.length]*fr;
+        if (o.crush) v = Math.round(v*16)/16;
+        out[off + i] += v*g*Math.min(1, i/fade, (slice - i)/fade); }
+      g = Math.min(1.2, g*(o.decay || 0.82)); } }
+  return out;
+}
+/* Granulatore: grani con finestra di Hann letti da una testina che scorre lungo il campione */
+function granulate(x, o){
+  const r = rng(o.seed), n = Math.floor(o.outSec*SR), out = new Float32Array(n), G = Math.floor(o.grainMs/1000*SR), w = new Float32Array(G);
+  for (let i = 0; i < G; i++) w[i] = 0.5 - 0.5*Math.cos(2*Math.PI*i/(G - 1));
+  const total = Math.floor(o.outSec*o.density);
+  for (let g = 0; g < total; g++){
+    const t = Math.floor((g + r() - 0.5)/o.density*SR); if (t < 0 || t >= n) continue;
+    const head = (t*o.scan) % x.length, pos = head + (r()*2 - 1)*o.spread*SR, rate = Math.pow(2, (r()*2 - 1)*o.jitter/12), a = 0.5 + 0.5*r();
+    for (let i = 0; i < G && t + i < n; i++){ let sp = pos + i*rate; sp = ((sp % x.length) + x.length) % x.length; const i0 = Math.floor(sp), fr = sp - i0;
+      out[t + i] += (x[i0]*(1 - fr) + x[(i0 + 1) % x.length]*fr)*w[i]*a; } }
+  return out;
+}
+/* Vulcano: inviluppo che cresce fino all'esplosione, beat repeat sempre più fitto, overdrive leggero (saturazione tanh miscelata al segnale pulito) */
+/* + boato: ottava sotto filtrata (sub) e passa-basso che si apre man mano che la pressione sale fino all'esplosione */
+function volcano(x, seed){
+  const n = Math.max(x.length, 10*SR), br = beatRepeat(x, { bpm: 120, chance: (p) => 0.15 + 0.8*p, div: 4, divAlt: 8, decay: 0.92, seed, minSec: n/SR }), out = new Float32Array(n);
+  const drive = 2, norm = Math.tanh(drive), aSub = Math.exp(-2*Math.PI*180/SR); let ySub = 0, yLp = 0;
+  for (let i = 0; i < n; i++){ const p = i/n, env = p < 0.7 ? 0.2 + 0.8*Math.pow(p/0.7, 2) : Math.exp(-(p - 0.7)*7);
+    const fc = p < 0.7 ? 300*Math.pow(40, p/0.7) : 12000, a = Math.exp(-2*Math.PI*fc/SR);
+    const v = x[i % x.length]*0.6 + br[i], od = Math.tanh(drive*v)/norm; yLp = (1 - a)*(0.45*v + 0.55*od) + a*yLp;
+    ySub = (1 - aSub)*x[Math.floor(i*0.5) % x.length] + aSub*ySub;
+    out[i] = (yLp + 2.2*ySub*(p < 0.7 ? 0.4 + 0.6*p/0.7 : 1))*env; }
+  return out;
+}
+/* inseguitore d'inviluppo a un polo con attacco e rilascio distinti */
+function follow(x, atk, rel){ const a = Math.exp(-1/(atk*SR)), r = Math.exp(-1/(rel*SR)), e = new Float32Array(x.length); let y = 0;
+  for (let i = 0; i < x.length; i++){ const v = Math.abs(x[i]), c = v > y ? a : r; y = (1 - c)*v + c*y; e[i] = y; } return e; }
+/* transient shaper: guadagno = rapporto tra inviluppo veloce e lento, esalta l'attacco e accorcia la coda */
+function transientShape(x){ const f = follow(x, 0.001, 0.02), s = follow(x, 0.03, 0.2), y = new Float32Array(x.length);
+  for (let i = 0; i < x.length; i++){ const g = Math.min(4, Math.max(0.15, Math.pow(f[i]/(s[i] + 1e-4), 1.5))); y[i] = x[i]*g; } return y; }
+/* soffio d'aria: rumore filtrato (300 Hz - 6 kHz) che segue l'inviluppo del campione */
+function addBreath(x, seed){ const r = rng(seed), env = follow(x, 0.02, 0.12), y = new Float32Array(x.length), aH = Math.exp(-2*Math.PI*300/SR), aL = Math.exp(-2*Math.PI*6000/SR);
+  let lp1 = 0, lp2 = 0; for (let i = 0; i < x.length; i++){ const w = r()*2 - 1; lp1 = (1 - aH)*w + aH*lp1; const hp = w - lp1; lp2 = (1 - aL)*hp + aL*lp2; y[i] = x[i] + 2.2*lp2*env[i]; } return y; }
+/* ottava sopra per la scia della cometa: lettura a velocità doppia ripetuta due volte */
+function octaveUp(x){ const n = x.length, y = new Float32Array(n), h = Math.floor(n/2); for (let i = 0; i < n; i++) y[i] = x[(2*(i % h)) % n]; return makeLoopable(y, 0.2); }
+const PROC = {
+  'tonica.A': (x) => beatRepeat(x, { bpm: 96, chance: 0.6, div: 4, decay: 0.82, seed: 21 }),
+  'tonica.B': (x) => x,
+  'tonica.C': (x) => makeLoopable(granulate(x, { outSec: 20, grainMs: 180, density: 40, scan: 0.2, spread: 0.35, jitter: 0.05, seed: 22 }), 1.5),
+  'segnale.A': (x) => transientShape(beatRepeat(x, { bpm: 110, chance: 0.75, div: 4, divAlt: 8, decay: 0.85, seed: 31 })),
+  'segnale.B': (x) => addBreath(x, 32),
+  'segnale.C': (x) => x,
+  'impronta.A': (x) => x,
+  'impronta.B': (x) => makeLoopable(granulate(x, { outSec: 16, grainMs: 90, density: 30, scan: 0.5, spread: 0.15, jitter: 0.3, seed: 41 }), 1),
+  'impronta.C': (x) => volcano(x, 42)
+};
+const PITCH = { 'tonica.B': [55, 110], 'segnale.A': [110, 220], 'segnale.B': [220, 440], 'segnale.C': [110, 220] };
+function ensureProc(key, v){
+  const st = S[key], id = key + '.' + v; if (!st.raw || st.proc[v]) return;
+  if (PITCH[id]) st.pitch[v] = dominantPitch(st.raw, PITCH[id][0], PITCH[id][1]);
+  if (id === 'impronta.A') st.extra = normalize(octaveUp(st.raw), -20);
+  const y = PROC[id](st.raw); st.proc[v] = y === st.raw ? st.raw : normalize(Float32Array.from(y), -20);
+}
+function makeIR(rt, pre, cS, cE, seed, attack){
+  const r = rng(seed), len = Math.floor((rt*1.1 + pre + (attack || 0))*SR), b = new AudioBuffer({ length: len, numberOfChannels: 2, sampleRate: SR }), p0 = Math.floor(pre*SR);
+  for (let ch = 0; ch < 2; ch++){ const d = b.getChannelData(ch); let y = 0;
+    for (let i = p0; i < len; i++){ const t = (i - p0)/SR, prog = Math.min(1, t/rt), fc = cS*Math.pow(cE/cS, prog), a = Math.exp(-2*Math.PI*fc/SR);
+      y = (1 - a)*(r()*2 - 1) + a*y; let e = Math.exp(-6.9*t/rt); if (attack) e *= Math.pow(Math.min(1, t/attack), 2); d[i] = y*e; } }
+  return b;
+}
+const IR = {};
+function irs(){ if (IR.tonica) return IR;
+  IR.tonica = makeIR(2.1, 0.03, 6000, 1500, 11); IR.tonA = makeIR(2.5, 0.02, 8000, 2000, 12); IR.plate = makeIR(1.4, 0.015, 14000, 6000, 13);
+  IR.segEnv = makeIR(4.5, 0.02, 9000, 2500, 14, 0.35); IR.room = makeIR(0.5, 0.008, 9000, 3000, 15); IR.comet = makeIR(8, 0.03, 12000, 4000, 16, 1.6);
+  return IR; }
+let NOISE = null;
+function noiseBuf(){ if (NOISE) return NOISE; const r = rng(99), x = new Float32Array(2*SR); for (let i = 0; i < x.length; i++) x[i] = r()*2 - 1; NOISE = toBuffer(x); return NOISE; }
+
+/* ======================= ESEMPI SINTETICI ======================= */
+function synth(kind){
+  const n = 8*SR, x = new Float32Array(n), r = rng(kind === 'tonica' ? 1 : kind === 'segnale' ? 2 : 3);
+  if (kind === 'tonica'){ let b = 0, c = 0; const cars = [[1.5, 1.2], [4.2, 1.6], [6.6, 1.0]];
+    for (let i = 0; i < n; i++){ const t = i/SR, wn = r()*2 - 1; b = (b + 0.02*wn)/1.02; let sw = 0; for (const [ct, wd] of cars) sw += Math.exp(-Math.pow((t - ct)/wd, 2));
+      c = c*0.9 + wn*0.1*(0.3 + sw); x[i] = b*3 + c*0.6 + 0.02*Math.sin(2*Math.PI*100*t); } }
+  else if (kind === 'segnale'){
+    const ex = new Float32Array(n), events = [[0.6, 2.2], [3.6, 5.4], [6.3, 7.4]];
+    for (let i = 0; i < n; i++) ex[i] = (r()*2 - 1)*0.002;
+    for (const [a, b] of events){ let ph = 0; for (let i = Math.floor(a*SR); i < Math.floor(b*SR); i++){ const p = (i/SR - a)/(b - a), rate = 25 + 90*Math.sin(Math.PI*p);
+      ph += rate/SR; if (ph >= 1){ ph -= 1; ex[i] += 0.5 + 0.5*r(); } } }
+    for (const [f, rr, g] of [[820, 0.995, 1], [1960, 0.993, 0.7], [3400, 0.99, 0.4]]){ const w = 2*Math.PI*f/SR, c1 = 2*rr*Math.cos(w), c2 = rr*rr; let y1 = 0, y2 = 0;
+      for (let i = 0; i < n; i++){ const y = ex[i] + c1*y1 - c2*y2; y2 = y1; y1 = y; x[i] += y*g*0.02; } } }
+  else { for (let i = 0; i < n; i++) x[i] = (r()*2 - 1)*0.003;
+    let t = 0.3; while (t < 7.6){ const cnt = 2 + Math.floor(r()*4);
+      for (let c = 0; c < cnt; c++){ const st = Math.floor((t + c*0.11)*SR), L = Math.floor(0.07*SR), f0 = 3800 + r()*900, f1 = f0 + 1500 + r()*900; let ph = 0;
+        for (let i = 0; i < L && st + i < n; i++){ const p = i/L; ph += 2*Math.PI*(f0 + (f1 - f0)*p)/SR; x[st + i] += 0.3*Math.sin(ph)*Math.sin(Math.PI*p); } }
+      t += 0.8 + r()*1.4; } }
+  return x;
+}
+const EXNAME = { tonica: 'Esempio sintetico: traffico con passaggi di auto', segnale: 'Esempio sintetico: cigolio di una porta', impronta: 'Esempio sintetico: richiami acuti di uccelli' };
+function setSample(key, data, name){
+  let x = data; if (x.length > 20*SR) x = x.slice(0, 20*SR);
+  x = makeLoopable(normalize(Float32Array.from(x), -20), 0.3);
+  const st = S[key]; st.raw = x; st.name = name; st.proc = {}; st.pitch = {}; st.extra = null; st.ver++;
+  if (st.eff) ensureProc(key, st.eff);
+}
+
+/* ======================= GRAFO AUDIO ======================= */
+const dB = (v) => Math.pow(10, v/20);
+function biq(c, type, f, q, g){ const n = c.createBiquadFilter(); n.type = type; n.frequency.value = f; if (q != null) n.Q.value = q; if (g != null) n.gain.value = g; return n; }
+function gn(c, v){ const n = c.createGain(); n.gain.value = v; return n; }
+function chainNodes(...ns){ for (let i = 0; i < ns.length - 1; i++) ns[i].connect(ns[i + 1]); return ns[ns.length - 1]; }
+function conv(c, b){ const n = c.createConvolver(); n.buffer = b; return n; }
+function src(c, x, t0, stops){ const s = c.createBufferSource(); s.buffer = toBuffer(x); s.loop = true; s.start(t0); stops.push(s); return s; }
+function onePole(c, fc){ const a = Math.exp(-2*Math.PI*fc/SR); return c.createIIRFilter([1 - a], [1, -a]); }
+function lfo(c, f, depth, target, t0, stops, delay){ const o = c.createOscillator(); o.frequency.value = f; o.connect(gn(c, depth)).connect(target); o.start(t0 + (delay || 0)); stops.push(o); }
+/* anelli di feedback: guadagno < 1 e filtri a un polo, quindi stabili */
+function comb(c, input, f, fb, lpf, outG){ const d = c.createDelay(0.1); d.delayTime.value = 1/f; const lp = onePole(c, lpf), o = gn(c, outG);
+  input.connect(gn(c, 0.15)).connect(d); d.connect(lp).connect(gn(c, fb)).connect(d); d.connect(o); return o; }
+function fbDelay(c, input, time, fb, lpf, wet){ const out = gn(c, 1); input.connect(out); const d = c.createDelay(2); d.delayTime.value = time;
+  input.connect(d); d.connect(onePole(c, lpf)).connect(gn(c, fb)).connect(d); d.connect(gn(c, wet)).connect(out); return out; }
+function bank(c, input, f0, mults, q, g){ const o = gn(c, 1); mults.forEach((m, i) => { if (f0*m < SR/2 - 2000) input.connect(biq(c, 'bandpass', f0*m, q)).connect(gn(c, g/(1 + i*0.5))).connect(o); }); return o; }
+function chorus(c, input, t0, stops){ const o = gn(c, 1); input.connect(gn(c, 0.6)).connect(o);
+  [[0.018, 0.31, -0.7], [0.023, 0.43, 0], [0.028, 0.57, 0.7]].forEach(([dt, f, p]) => { const d = c.createDelay(0.05); d.delayTime.value = dt; lfo(c, f, 0.003, d.delayTime, t0, stops);
+    const pn = c.createStereoPanner(); pn.pan.value = p; input.connect(d); d.connect(gn(c, 0.45)).connect(pn).connect(o); }); return o; }
+function flangerSwirl(c, input, t0, stops){ const o = gn(c, 1); input.connect(gn(c, 0.7)).connect(o);
+  const d = c.createDelay(0.02); d.delayTime.value = 0.0045; lfo(c, 0.2, 0.0015, d.delayTime, t0, stops);
+  input.connect(d); d.connect(gn(c, 0.6)).connect(d); d.connect(gn(c, 0.7)).connect(o);
+  const pn = c.createStereoPanner(); lfo(c, 0.15, 0.8, pn.pan, t0, stops); o.connect(pn); return pn; }
+function phaser(c, input, t0, stops){ let n = input; for (let i = 0; i < 4; i++){ const a = biq(c, 'allpass', 800, 0.6); lfo(c, 0.25, 600, a.frequency, t0, stops); n.connect(a); n = a; }
+  const o = gn(c, 1); input.connect(gn(c, 0.6)).connect(o); n.connect(gn(c, 0.6)).connect(o); return o; }
+/* spirale: cicli di 16 s in cui la rotazione accelera (0,1 → 1,6 Hz), il suono si avvicina (più livello, meno riverbero) e l'effetto Doppler cresce */
+function spiral(c, input, t0, stops){
+  const CYC = 16, N = 40, rot = c.createOscillator(), dop = c.createOscillator();
+  [rot, dop].forEach((o) => { for (let k = 0; k < N; k++){ const t = t0 + k*CYC; o.frequency.setValueAtTime(0.1, t); o.frequency.exponentialRampToValueAtTime(1.6, t + CYC - 1); } o.start(t0); stops.push(o); });
+  const d = c.createDelay(0.02); d.delayTime.value = 0.004; dop.connect(gn(c, 0.0015)).connect(d.delayTime);
+  const pn = c.createStereoPanner(); rot.connect(gn(c, 0.95)).connect(pn.pan);
+  const near = gn(c, 0.35), far = gn(c, 0.8), o = gn(c, 1);
+  for (let k = 0; k < N; k++){ const t = t0 + k*CYC; near.gain.setValueAtTime(0.35, t); near.gain.linearRampToValueAtTime(1, t + CYC - 1); far.gain.setValueAtTime(0.8, t); far.gain.linearRampToValueAtTime(0.1, t + CYC - 1); }
+  input.connect(d).connect(pn); pn.connect(near).connect(o); pn.connect(far).connect(conv(c, IR.tonA)).connect(o); return o; }
+/* corde: tre risonatori Karplus-Strong (ottava sotto, fondamentale, quinta) eccitati dalla parte acuta del campione, poi cassa armonica */
+function strings(c, input, f, t0, stops){ const exc = chainNodes(input, biq(c, 'highpass', 150, 0)), o = gn(c, 1);
+  [[f/2, 0.99, 0.9], [f, 0.99, 1], [f*1.5, 0.985, 0.7]].forEach(([ff, fb, g]) => comb(c, exc, ff, fb, 4000, g).connect(o));
+  const body = gn(c, 1); o.connect(body); o.connect(biq(c, 'peaking', 250, 1, 4)).connect(conv(c, IR.room)).connect(gn(c, 0.4)).connect(body);
+  input.connect(gn(c, 0.08)).connect(body); return body; }
+function erosion(c, input, t0, stops){ const o = gn(c, 1); input.connect(gn(c, 0.5)).connect(o);
+  const d = c.createDelay(0.01); d.delayTime.value = 0.0015; const ns = c.createBufferSource(); ns.buffer = noiseBuf(); ns.loop = true;
+  ns.connect(biq(c, 'bandpass', 3000, 1)).connect(gn(c, 0.0012)).connect(d.delayTime); ns.start(t0); stops.push(ns);
+  input.connect(d); d.connect(gn(c, 0.8)).connect(o); return o; }
+const LIVE = {
+  'tonica.A': (c, i) => { const o = gn(c, 1); i.connect(gn(c, 0.7)).connect(o); i.connect(conv(c, IR.tonA)).connect(gn(c, 0.45)).connect(o); return o; },
+  'tonica.B': (c, i, t0, s, st) => { const f = st.pitch.B.f0, o = gn(c, 1);
+    [[f, 0.95, 1], [f*1.5, 0.93, 0.7], [f*2, 0.9, 0.5]].forEach(([ff, fb, g]) => comb(c, i, ff, fb, 1500, g).connect(o)); i.connect(gn(c, 0.15)).connect(o);
+    return chainNodes(o, biq(c, 'lowpass', 900, 0)); },
+  'tonica.C': (c, i, t0, s) => chorus(c, i, t0, s),
+  /* percussione: modi di una membrana circolare (rapporti 1 · 1,59 · 2,14 · 2,30 · 2,65 · 2,92) accordati sul campione */
+  'segnale.A': (c, i, t0, s, st) => { const o = gn(c, 1); i.connect(gn(c, 0.7)).connect(o); bank(c, i, st.pitch.A.f0, [1, 1.59, 2.14, 2.30, 2.65, 2.92], 12, 4).connect(o); return o; },
+  /* fiato: vibrato a 5 Hz, tubo con armoniche dispari, riverbero che si gonfia */
+  'segnale.B': (c, i, t0, s, st) => { const vib = c.createDelay(0.02); vib.delayTime.value = 0.004; lfo(c, 5, 0.0006, vib.delayTime, t0, s); i.connect(vib);
+    const body = gn(c, 1); bank(c, vib, st.pitch.B.f0, [1, 3, 5, 7], 25, 7).connect(body); vib.connect(gn(c, 0.3)).connect(body);
+    const o = gn(c, 1); body.connect(gn(c, 0.6)).connect(o); body.connect(conv(c, IR.segEnv)).connect(gn(c, 0.8)).connect(o); return o; },
+  'segnale.C': (c, i, t0, s, st) => strings(c, i, st.pitch.C.f0, t0, s),
+  /* cometa: testa quasi asciutta, coda che si gonfia lentamente, scia un'ottava sopra, eco, attraversamento lento dello spazio stereo */
+  'impronta.A': (c, i, t0, s, st) => { const sw = gn(c, 1); i.connect(gn(c, 0.25)).connect(sw); i.connect(conv(c, IR.comet)).connect(gn(c, 0.9)).connect(sw);
+    if (st.extra){ const sh = src(c, st.extra, t0, s); chainNodes(sh, biq(c, 'highpass', 600, 0), conv(c, IR.comet), gn(c, 0.45), sw); }
+    const del = fbDelay(c, sw, 0.5, 0.6, 3000, 0.5), pn = c.createStereoPanner(); lfo(c, 0.05, 0.8, pn.pan, t0, s); del.connect(pn); return pn; },
+  'impronta.B': (c, i, t0, s) => spiral(c, phaser(c, i, t0, s), t0, s),
+  'impronta.C': (c, i, t0, s) => erosion(c, i, t0, s)
+};
+function baseChain(c, key, sum, st){
+  let n;
+  if (key === 'tonica'){ n = chainNodes(sum, biq(c, 'highpass', 40, 0), biq(c, 'lowpass', 1500, 0)); }
+  else if (key === 'segnale'){ const cp = c.createDynamicsCompressor(); cp.threshold.value = -24; cp.ratio.value = 4; cp.attack.value = 0.003; cp.release.value = 0.08; cp.knee.value = 6;
+    n = chainNodes(sum, biq(c, 'highpass', 300, 0), biq(c, 'highpass', 300, 0), biq(c, 'peaking', 2500, 1, 4), biq(c, 'highshelf', 8000, null, 2), cp); }
+  else { const cp = c.createDynamicsCompressor(); cp.threshold.value = -18; cp.ratio.value = 2.5; cp.attack.value = 0.015; cp.release.value = 0.15; cp.knee.value = 6;
+    n = chainNodes(sum, biq(c, 'highpass', 90, 0), cp); }
+  return n;
+}
+function buildSlot(c, key, out, t0, live, sendBus, ignoreMute){
+  const st = S[key], sec = SEC[key], stops = [], sum = gn(c, 1);
+  const o = src(c, st.raw, t0, stops), ready = st.eff && st.proc[st.eff];
+  const origG = gn(c, ready ? 1 - st.mix : 1); o.connect(origG).connect(sum);
+  let transG = null;
+  if (ready){ const s = src(c, st.proc[st.eff], t0, stops), e = LIVE[key + '.' + st.eff](c, s, t0, stops, st);
+    transG = gn(c, st.mix); e.connect(transG).connect(sum); }
+  let n = baseChain(c, key, sum, st);
+  /* respiro automatico: livello che oscilla tra 0,5 e 1, con periodi diversi per traccia così i tre respiri non coincidono */
+  { const tg = gn(c, 0.75); lfo(c, 1/BREATH[key], 0.25, tg.gain, t0, stops); n = chainNodes(n, tg); }
+  const muted = st.mute && !ignoreMute, track = gn(c, muted ? 0 : dB(st.level)); let dry, wet;
+  if (key === 'tonica'){ dry = gn(c, 1 - st.wet); wet = gn(c, st.wet); n.connect(dry).connect(track); chainNodes(n, biq(c, 'lowpass', 2770, 0), conv(c, IR.tonica), wet, track); }
+  else { dry = gn(c, 1); wet = gn(c, st.wet); n.connect(dry).connect(track); chainNodes(n, wet, conv(c, key === 'segnale' ? IR.plate : IR.room), track); }
+  let fin = track; if (key === 'segnale'){ const p = c.createStereoPanner(); p.pan.value = 0.3; track.connect(p); fin = p; }
+  fin.connect(out);
+  const send = gn(c, st.send ? SEND : 0); fin.connect(send).connect(sendBus);
+  if (live) live[key] = { track, dry, wet, origG, transG, send, ignoreMute: !!ignoreMute };
+  return stops;
+}
+/* master: tracce → [delay in feedback condiviso, solo ripetizioni] → temperatura (shelving) → volume → limitatore */
+function buildAll(c, dest, keys, opts){
+  irs(); opts = opts || {};
+  const lim = c.createDynamicsCompressor(); lim.threshold.value = -3; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.1; lim.knee.value = 0; lim.connect(dest);
+  const T = TEMP[M.temp || 'neutro'], mg = gn(c, dB(M.vol)), ls = biq(c, 'lowshelf', 250, null, T.ls), hs = biq(c, 'highshelf', T.hf, null, T.hs), mIn = gn(c, 1);
+  chainNodes(mIn, ls, hs, mg, lim);
+  const dIn = gn(c, 1), d = c.createDelay(2); d.delayTime.value = 0.42; dIn.connect(d); d.connect(onePole(c, 3000)).connect(gn(c, 0.55)).connect(d); d.connect(mIn);
+  const t0 = c.currentTime + 0.05, stops = [], live = { master: { ls, hs, mg } };
+  for (const k of keys) if (S[k].raw) stops.push(...buildSlot(c, k, mIn, t0, live, dIn, opts.ignoreMute));
+  return { stops, live };
+}
+
+/* ======================= TRASPORTO ======================= */
+let playing = null;
+function ensureCtx(){ if (!ctx) ctx = new AudioContext({ sampleRate: SR }); if (ctx.state === 'suspended') ctx.resume(); return ctx; }
+function stop(){ if (!playing) return; for (const s of playing.stops){ try { s.stop(); } catch (e) {} } try { playing.bus.disconnect(); } catch (e) {} playing = null; refreshPlayButtons(); }
+function play(keys, tag){
+  const c = ensureCtx(); stop(); const bus = gn(c, 1); bus.connect(c.destination);
+  const g = buildAll(c, bus, keys, { ignoreMute: tag !== 'all' });
+  if (!g.stops.length){ bus.disconnect(); setStatus('Non ci sono campioni da ascoltare.', true); return; }
+  playing = { stops: g.stops, live: g.live, keys, tag, bus }; refreshPlayButtons();
+}
+function restart(){ if (playing) play(playing.keys, playing.tag); }
+function refreshPlayButtons(){ document.querySelectorAll('[data-act=play]').forEach((b) => { const on = playing && playing.tag === b.dataset.tag; b.setAttribute('aria-pressed', String(!!on)); b.querySelector('.lbl').textContent = on ? 'Ferma' : b.dataset.label; }); }
+
+/* ======================= RENDER OFFLINE ======================= */
+async function renderKeys(keys, sec, channels){
+  const L = Math.floor(sec*SR), oc = new OfflineAudioContext(channels || 2, L, SR), bus = oc.createGain(); bus.connect(oc.destination);
+  buildAll(oc, bus, keys, { ignoreMute: true });
+  if (sec > 10){ bus.gain.setValueAtTime(0, 0); bus.gain.linearRampToValueAtTime(1, 1); bus.gain.setValueAtTime(1, sec - 2); bus.gain.linearRampToValueAtTime(0, sec); }
+  return oc.startRendering();
+}
+
+/* ======================= PERCORSO ======================= */
+const STEPS = [{ t: 'intro' }];
+for (const k of KEYS) STEPS.push({ t: 'forma', k }, { t: 'compito', k }, { t: 'registra', k }, { t: 'effetto', k });
+STEPS.push({ t: 'mixer' }, { t: 'lascia' });
+let step = 0;
+
+function svgShape(poly, color, size){ return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true"><polygon points="' + SHAPES[poly] + '" style="fill:' + color + '" stroke="currentColor" stroke-width="0.6"></polygon></svg>'; }
+function shapeOf(k){ const st = S[k]; return SEC[k].shapes.find((s) => s.id === st.shape); }
+function effOpt(k){ return SEC[k].opts.find((o) => o.v === S[k].eff); }
+function fxChips(arr){ return '<span class="fx">' + arr.map((f) => '<span>' + f + '</span>').join(' → ') + '</span>'; }
+function accStyle(k){ const a = k ? SEC[k].acc : '--cmp'; return '--acc:var(' + a + ');--tint:var(' + a + '-t)'; }
+function canNext(){ const s = STEPS[step], st = s.k && S[s.k];
+  if (s.t === 'forma') return st.shape ? '' : 'Scegli una forma per continuare.';
+  if (s.t === 'registra') return st.raw ? '' : 'Registra, carica un file o usa l’esempio.';
+  if (s.t === 'effetto') return st.eff ? '' : 'Scegli una risposta per continuare.';
+  return ''; }
+function playBtn(tag, label){ return '<button class="btn wide" type="button" data-act="play" data-tag="' + tag + '" data-label="' + label + '" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="7,4 20,12 7,20" fill="currentColor"></polygon></svg><span class="lbl">' + label + '</span></button>'; }
+function manageBtn(k){ return '<button class="btn ghost wide" type="button" data-act="manage" data-k="' + k + '">Gestisci campione ed effetti</button>'; }
+
+function renderCard(){
+  const s = STEPS[step], card = $('card'); card.setAttribute('style', accStyle(s.k));
+  let h = '';
+  if (s.t === 'intro'){
+    h = '<div class="tag"><b></b>Firenze si ascolta · WILD:CARE</div><h1>Fotografia sonora</h1>'
+      + '<p class="sub">Registrerai tre suoni di questo luogo e li trasformerai rispondendo a qualche domanda. Alla fine li ascolterai insieme e sceglierai cosa lasciare qui.</p>'
+      + '<ul class="legend"><li><b style="background:var(--ton)"></b><span><strong>Tonica</strong>: lo sfondo continuo che di solito non ascolti.</span></li><li><b style="background:var(--seg)"></b><span><strong>Segnale</strong>: ciò che emerge e chiama l’attenzione.</span></li><li><b style="background:var(--imp)"></b><span><strong>Impronta sonora</strong>: il suono che appartiene solo a questo posto.</span></li></ul>'
+      + '<p class="sub">Ogni sezione comincia da una forma. La forma ti dice come ascoltare:</p>'
+      + '<ul class="legend shapes"><li>' + svgShape('Q', 'var(--panel)', 26) + '<span><strong>4 lati</strong>: ascolto seduto e diffuso.</span></li><li>' + svgShape('T', 'var(--panel)', 26) + '<span><strong>3 lati</strong>: ascolto puntuale.</span></li></ul>'
+      + '<p class="small">Prototipo funzionale. Ogni sezione ha un suono di esempio sintetico per provare il percorso senza registrare.</p>'
+      + '<button class="btn ghost" type="button" data-act="quick">Prova veloce: carica i tre esempi e vai all’ascolto</button>';
+  }
+  else if (s.t === 'forma'){ const sec = SEC[s.k], st = S[s.k];
+    h = '<div class="tag"><b></b>' + sec.n + ' · ' + sec.name + '</div><h2>Scegli una forma</h2><p class="sub">La forma decide la postura del tuo ascolto per ' + sec.def + '.</p><div class="opts">'
+      + sec.shapes.map((sh) => '<button class="opt shape" type="button" data-act="shape" data-v="' + sh.id + '" aria-pressed="' + (st.shape === sh.id) + '">' + svgShape(sh.poly, sh.color, 56)
+        + '<span class="txt"><span class="ttl">' + sh.sides + ' lati · ' + POSTURE[sh.sides].t + '</span><span class="dsc">' + POSTURE[sh.sides].d + '</span><span class="fx"><span>Carta WILD:CARE: ' + sh.card + '</span></span></span></button>').join('') + '</div>';
+  }
+  else if (s.t === 'compito'){ const sec = SEC[s.k], st = S[s.k], sh = shapeOf(s.k);
+    if (st.task == null || st.task >= sh.tasks.length) st.task = Math.floor(Math.random()*sh.tasks.length);
+    h = '<div class="tag"><b></b>' + sec.n + ' · ' + sec.name + '</div>' + postureBox(sh) + '<h2>Il tuo suggerimento</h2><p class="quote">' + sh.tasks[st.task] + '</p>';
+    h += '<p class="small">Quando hai trovato il suono, vai avanti per registrarlo.</p>';
+  }
+  else if (s.t === 'registra'){ const sec = SEC[s.k], st = S[s.k], sh = shapeOf(s.k);
+    h = '<div class="tag"><b></b>' + sec.n + ' · ' + sec.name + '</div><h2>Registra il suono</h2><p class="quote">' + sh.tasks[st.task || 0] + '</p><div class="row">'
+      + '<button class="btn acc wide" type="button" data-act="rec" data-k="' + s.k + '"><span class="lbl">' + (recState ? 'Stop' : 'Registra') + '</span></button>'
+      + '<label class="btn ghost wide" for="file-in">Carica un file</label>'
+      + '<input class="hidden-input" type="file" id="file-in" accept="audio/*" capture data-k="' + s.k + '">'
+      + '<button class="btn ghost wide" type="button" data-act="example" data-k="' + s.k + '">Usa l’esempio</button></div>'
+      + '<div class="meta" id="meta">' + (st.raw ? st.name + ' · ' + (st.raw.length/SR).toFixed(1) + ' s' : 'Nessun suono ancora') + '</div>'
+      + '<canvas id="wave" width="880" height="128" role="img" aria-label="Forma d’onda del campione"></canvas>'
+      + '<div class="qblock"><h3>Effetto di base</h3><p class="small">' + sec.base + '</p>' + fxChips(sec.baseFx) + '</div>'
+      + '<div class="row">' + playBtn('solo-' + s.k, 'Ascolta') + manageBtn(s.k) + '</div><div class="status" id="status"></div>';
+  }
+  else if (s.t === 'effetto'){ const sec = SEC[s.k], st = S[s.k];
+    h = '<div class="tag"><b></b>' + sec.n + ' · ' + sec.name + '</div><h2>' + sec.q + '</h2><div class="opts">'
+      + sec.opts.map((o) => '<button class="opt" type="button" data-act="eff" data-v="' + o.v + '" aria-pressed="' + (st.eff === o.v) + '"><span class="txt"><span class="ttl">' + o.t + '</span>' + fxChips(o.fx) + '</span></button>').join('') + '</div>'
+      + '<canvas id="wave" width="880" height="128" role="img" aria-label="Forma d’onda del campione trasformato"></canvas>'
+      + '<div class="row">' + playBtn('solo-' + s.k, 'Ascolta') + manageBtn(s.k) + '</div><div class="status" id="status"></div>';
+  }
+  else if (s.t === 'tempo'){ const sec = SEC[s.k], st = S[s.k];
+    const q = (name, title, opts) => '<div class="qblock"><h3>' + title + '</h3><div class="opts two">' + opts.map(([v, t, d]) => '<button class="opt" type="button" data-act="' + name + '" data-v="' + v + '" aria-pressed="' + (st[name] === v) + '"><span class="txt"><span class="ttl">' + t + '</span><span class="dsc">' + d + '</span></span></button>').join('') + '</div></div>';
+    h = '<div class="tag"><b></b>' + sec.n + ' · ' + sec.name + '</div><h2>Movimento</h2><p class="sub">Un’ultima scelta per questo suono. Puoi anche lasciarla vuota.</p>'
+      + q('mov', 'Come si muove nel tempo?', [['respira', 'Respira', 'il livello sale e scende lentamente'], ['fermo', 'Resta immobile', 'dinamica compressa e piatta']])
+      + '<canvas id="wave" width="880" height="128" role="img" aria-label="Forma d’onda del campione trasformato"></canvas>'
+      + '<div class="row">' + playBtn('solo-' + s.k, 'Ascolta') + manageBtn(s.k) + '</div><div class="status" id="status"></div>';
+  }
+  else if (s.t === 'mixer'){
+    const T = (v, t, d) => '<button class="opt" type="button" data-act="temp" data-v="' + v + '" aria-pressed="' + ((M.temp || 'neutro') === v) + '"><span class="txt"><span class="ttl">' + t + '</span><span class="dsc">' + d + '</span></span></button>';
+    h = '<div class="tag"><b></b>4 · Composizione</div><h2>Mixer</h2><p class="sub">Ascolta la tua fotografia sonora e regola ogni traccia mentre suona: volume, muto, delay.</p>'
+      + '<div class="row">' + playBtn('all', 'Ascolta la composizione') + '</div>'
+      + KEYS.map(mixRow).join('')
+      + '<div class="part master"><div class="mtitle"><div class="nm">Master</div><div class="small">Vale per tutta la composizione</div></div>'
+      + '<div class="act"><div class="qblock" style="width:100%"><h3>Che temperatura ha la tua fotografia sonora?</h3><div class="opts three">'
+      + T('caldo', 'Calda', 'più corpo') + T('neutro', 'Neutra', 'invariata') + T('freddo', 'Fredda', 'più aria') + '</div></div></div>'
+      + '<div class="act">' + slider('mx-master', 'Volume generale', -24, 6, 1, M.vol, fmtDb(M.vol)) + '</div></div>'
+      + '<p class="small">Delay: un’unica eco in feedback (420 ms, ripetizioni al 55%) condivisa da tutte le tracce; il pulsante decide quali tracce la alimentano.</p><div class="status" id="status"></div>';
+  }
+  else if (s.t === 'lascia'){
+    h = '<div class="tag"><b></b>4 · Composizione</div><h2>Scegli cosa lasciare a questo luogo</h2><p class="sub">Le parti che lasci formano la fotografia sonora del posto.</p>'
+      + KEYS.map((k) => partRow(k, 'keep', 'Lascia questa parte')).join('')
+      + '<div class="row">' + playBtn('keep', 'Ascolta ciò che lasci') + '</div>'
+      + saveHtml()
+      + '<p class="small">L’archivio contiene il mix, una traccia WAV per ogni parte lasciata e un file con le scelte fatte. Il mix usa volumi, delay e temperatura del mixer.</p><div class="status" id="status"></div>';
+  }
+  card.innerHTML = h;
+  // barra
+  const secIdx = s.k ? SEC[s.k].n - 1 : (s.t === 'intro' ? -1 : 3);
+  const within = s.k ? ['forma', 'compito', 'registra', 'effetto'].indexOf(s.t) + 1 : (s.t === 'mixer' ? 1 : 2), tot = s.k ? 4 : 2;
+  $('segs').innerHTML = [['Tonica', '--ton'], ['Segnale', '--seg'], ['Impronta', '--imp'], ['Ascolto', '--cmp']].map(([n, c], i) => '<div class="seg ' + (i < secIdx ? 'done' : i === secIdx ? 'now' : '') + '" style="--c:var(' + c + ');--p:' + (i === secIdx ? Math.round(within/tot*100) : 0) + '%"><i></i>' + n + '</div>').join('');
+  $('stepno').textContent = 'Passo ' + (step + 1) + ' di ' + STEPS.length;
+  const why = canNext(); $('next').disabled = !!why; $('hint').textContent = why;
+  $('back').disabled = step === 0; $('next').textContent = step === 0 ? 'Inizia' : step === STEPS.length - 1 ? 'Ricomincia' : 'Avanti';
+  refreshPlayButtons(); drawWave();
+}
+function postureBox(sh){ return '<div class="posture">' + svgShape(sh.poly, sh.color, 30) + '<span><strong>' + POSTURE[sh.sides].t + '.</strong> ' + POSTURE[sh.sides].d + '</span></div>'; }
+function partRow(k, field, label){ const st = S[k], sec = SEC[k], sh = shapeOf(k), o = effOpt(k);
+  const desc = st.raw ? (o ? o.t : 'Solo effetto di base') : 'Nessun suono registrato';
+  return '<div class="part" style="' + accStyle(k) + '">' + (sh ? svgShape(sh.poly, sh.color, 34) : svgShape('Q', 'var(--line)', 34)) + '<div><div class="nm">' + sec.n + ' · ' + sec.name + '</div><div class="small">' + desc + '</div></div>'
+    + '<div class="act"><label><input type="checkbox" data-act="' + field + '" data-k="' + k + '" ' + (st[field] ? 'checked' : '') + (st.raw ? '' : ' disabled') + '> ' + label + '</label>'
+    + '<button class="btn ghost" type="button" data-act="play" data-tag="solo-' + k + '" data-label="Solo" aria-pressed="false"><span class="lbl">Solo</span></button>'
+    + '<button class="btn ghost" type="button" data-act="manage" data-k="' + k + '">Gestisci</button></div></div>'; }
+function fmtDb(v){ return (v > 0 ? '+' : '') + v + ' dB'; }
+function mixRow(k){ const st = S[k], sec = SEC[k], sh = shapeOf(k), o = effOpt(k), dis = st.raw ? '' : ' disabled';
+  const desc = st.raw ? (o ? o.t : 'Solo effetto di base') : 'Nessun suono registrato';
+  const tog = (act, label, on) => '<button class="btn ghost tog" type="button" data-act="' + act + '" data-k="' + k + '" aria-pressed="' + on + '"' + dis + '>' + label + '</button>';
+  return '<div class="part" style="' + accStyle(k) + '">' + (sh ? svgShape(sh.poly, sh.color, 34) : svgShape('Q', 'var(--line)', 34)) + '<div><div class="nm">' + sec.n + ' · ' + sec.name + '</div><div class="small">' + desc + '</div></div>'
+    + '<div class="act">' + slider('mx-' + k, 'Volume', -36, 6, 1, st.level, st.mute ? 'muto' : fmtDb(st.level)).replace('type="range"', 'type="range"' + dis) + '</div>'
+    + '<div class="act">' + tog('mute', 'Muto', st.mute) + tog('send', 'Delay', st.send)
+    + '<button class="btn ghost" type="button" data-act="play" data-tag="solo-' + k + '" data-label="Solo" aria-pressed="false"' + dis + '><span class="lbl">Solo</span></button>'
+    + '<button class="btn ghost" type="button" data-act="manage" data-k="' + k + '">Gestisci</button></div></div>'; }
+function liveTrack(k){ const L = playing && playing.live[k]; if (!L) return; const st = S[k]; L.track.gain.value = (st.mute && !L.ignoreMute) ? 0 : dB(st.level); L.send.gain.value = st.send ? SEND : 0; }
+function liveMaster(){ const L = playing && playing.live.master; if (!L) return; const T = TEMP[M.temp || 'neutro']; L.ls.gain.value = T.ls; L.hs.gain.value = T.hs; L.hs.frequency.value = T.hf; L.mg.gain.value = dB(M.vol); }
+function setStatus(t, warn){ const el = $('status'); if (el){ el.textContent = t; el.classList.toggle('warn', !!warn); } }
+
+/* forma d'onda: campione originale e risultato renderizzato */
+function cssVar(n, el){ return getComputedStyle(el || document.documentElement).getPropertyValue(n).trim(); }
+function paint(g, x, W, H, color, alpha, scale){ if (!x) return; g.globalAlpha = alpha; g.fillStyle = color; const step = x.length/W;
+  for (let px = 0; px < W; px++){ let mn = 1, mx = -1; const a = Math.floor(px*step), b = Math.floor((px + 1)*step); for (let i = a; i < b; i++){ const v = x[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+    const y1 = (1 - Math.min(1, mx*scale))*H/2, y2 = (1 - Math.max(-1, mn*scale))*H/2; g.fillRect(px, y1, 1, Math.max(1, y2 - y1)); } g.globalAlpha = 1; }
+let drawSeq = 0;
+async function drawWave(){
+  const cv = $('wave'); if (!cv) return; const s = STEPS[step], st = S[s.k], g = cv.getContext('2d'), W = cv.width, H = cv.height, seq = ++drawSeq;
+  g.clearRect(0, 0, W, H); if (!st.raw) return;
+  paint(g, st.raw, W, H, cssVar('--wave'), 1, 2.5);
+  if (s.t === 'registra') return;
+  try { const b = await renderKeys([s.k], 8, 1); if (seq !== drawSeq) return; const y = b.getChannelData(0), p = peak(y) || 1;
+    paint(g, y, W, H, cssVar('--acc', $('card')), 0.75, 0.9/p); } catch (e) {}
+}
+
+/* ======================= INTERAZIONI ======================= */
+$('card').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return; const s = STEPS[step], act = b.dataset.act;
+  if (act === 'shape'){ const st = S[s.k]; if (st.shape !== b.dataset.v){ st.shape = b.dataset.v; st.task = Math.floor(Math.random()*shapeOf(s.k).tasks.length); } renderCard(); }
+  else if (act === 'task'){ S[s.k].task = +b.dataset.v; renderCard(); }
+  else if (act === 'example'){ setSample(b.dataset.k, synth(b.dataset.k), EXNAME[b.dataset.k]); renderCard(); restart(); }
+  else if (act === 'rec') record(b.dataset.k);
+  else if (act === 'eff'){ const st = S[s.k], v = b.dataset.v; if (st.eff === v){ st.eff = null; renderCard(); restart(); return; }
+    b.classList.add('busy'); setStatus('Preparo l’effetto…');
+    setTimeout(() => { ensureProc(s.k, v); st.eff = v; renderCard(); restart(); setStatus(''); }, 30); }
+  else if (act === 'mov'){ const st = S[s.k]; st.mov = st.mov === b.dataset.v ? null : b.dataset.v; renderCard(); restart(); }
+  else if (act === 'mute' || act === 'send'){ const k = b.dataset.k, st = S[k]; st[act] = !st[act]; b.setAttribute('aria-pressed', String(st[act]));
+    if (act === 'mute'){ const o = $('sl-mx-' + k + '-o'); if (o) o.textContent = st.mute ? 'muto' : fmtDb(st.level); } liveTrack(k); }
+  else if (act === 'temp'){ M.temp = b.dataset.v === 'neutro' ? null : b.dataset.v; $('card').querySelectorAll('[data-act=temp]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.v === (M.temp || 'neutro')))); liveMaster(); }
+  else if (act === 'play'){ const tag = b.dataset.tag; if (playing && playing.tag === tag){ stop(); return; }
+    const keys = tag === 'all' ? KEYS : tag === 'keep' ? KEYS.filter((k) => S[k].keep) : [tag.slice(5)];
+    play(keys, tag); }
+  else if (act === 'manage') openSheet(b.dataset.k);
+  else if (act === 'quick') quickFill();
+  else if (act === 'export') exportZip();
+  else if (act === 'save') saveZip();
+  else if (act === 'share') shareZip();
+});
+$('card').addEventListener('change', async (ev) => {
+  const t = ev.target, s = STEPS[step];
+  if (t.dataset.act === 'keep'){ S[t.dataset.k].keep = t.checked; if (playing && playing.tag === 'keep') play(KEYS.filter((k) => S[k].keep), 'keep'); renderCard(); }
+  else if (t.type === 'file') await loadFile(t);
+});
+/* cursori del mixer: aggiornano il suono in tempo reale senza ricostruire la card */
+$('card').addEventListener('input', (ev) => { const t = ev.target, id = t.dataset.sl; if (!id || !id.startsWith('mx-')) return; const k = id.slice(3), v = +t.value;
+  if (k === 'master'){ M.vol = v; $('sl-mx-master-o').textContent = fmtDb(v); liveMaster(); }
+  else { S[k].level = v; $('sl-' + id + '-o').textContent = S[k].mute ? 'muto' : fmtDb(v); liveTrack(k); } });
+async function decodeToMono(ab){ const c = ensureCtx(), buf = await c.decodeAudioData(ab), n = buf.length, x = new Float32Array(n);
+  for (let ch = 0; ch < buf.numberOfChannels; ch++){ const d = buf.getChannelData(ch); for (let i = 0; i < n; i++) x[i] += d[i]/buf.numberOfChannels; } return x; }
+async function loadFile(inp){ const f = inp.files && inp.files[0]; if (!f) return; const k = inp.dataset.k; setStatus('Apro ' + f.name + '…');
+  try { setSample(k, await decodeToMono(await f.arrayBuffer()), f.name); renderCard(); refreshSheet(); restart(); setStatus('Caricato: ' + f.name + '.'); }
+  catch (e) { setStatus('Il file non si apre: prova un WAV, MP3 o M4A.', true); } inp.value = ''; }
+let recState = null, micBlocked = false;
+/* «Registra» chiede sempre prima il microfono. Se il browser lo nega (permesso rifiutato, pagina non sicura
+   o visualizzatore di Claude, che non concede il microfono), apre subito il selettore del telefono, che su
+   molti dispositivi offre il registratore vocale. */
+function openPicker(){ const inp = $('file-in'); if (inp) try { inp.click(); } catch (e) {} }
+async function record(k){
+  if (recState){ recState.rec.stop(); return; }
+  if (micBlocked){ setStatus('Il microfono non è disponibile in questa vista: si apre il selettore del telefono.', true); openPicker(); return; }
+  try { if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') throw new Error('unsupported');
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const rec = new MediaRecorder(stream), chunks = []; rec.ondataavailable = (e) => chunks.push(e.data);
+    rec.onstop = async () => { stream.getTracks().forEach((t) => t.stop()); clearTimeout(recState.timer); recState = null;
+      try { setSample(k, await decodeToMono(await new Blob(chunks).arrayBuffer()), 'Registrazione delle ' + new Date().toLocaleTimeString('it-IT')); renderCard(); refreshSheet(); setStatus('Registrazione pronta.'); }
+      catch (e) { renderCard(); setStatus('La registrazione non si decodifica in questo browser.', true); } };
+    stop(); rec.start(); recState = { rec, timer: setTimeout(() => rec.state === 'recording' && rec.stop(), 20000) }; renderCard(); setStatus('Sto registrando (massimo 20 s)…');
+  } catch (e) {
+    micBlocked = true;
+    const why = IN_VIEWER ? 'L’app di Claude non concede il microfono alle pagine che mostra' : (e && e.name === 'NotAllowedError') ? 'Il permesso per il microfono è stato negato (puoi riattivarlo nelle impostazioni del sito)' : 'Questo browser non dà accesso al microfono';
+    setStatus(why + ': si apre il selettore del telefono, dove puoi registrare o scegliere un file.', true); openPicker(); }
+}
+function quickFill(){
+  KEYS.forEach((k) => { const st = S[k]; setSample(k, synth(k), EXNAME[k]); st.shape = SEC[k].shapes[0].id; st.task = Math.floor(Math.random()*SEC[k].shapes[0].tasks.length); st.eff = 'B'; ensureProc(k, 'B'); });
+  step = STEPS.findIndex((x) => x.t === 'mixer'); stop(); renderCard();
+}
+$('next').addEventListener('click', () => { if (step === STEPS.length - 1){ step = 0; } else if (!canNext()) step++; if (!playing || !playing.tag.startsWith('solo') || STEPS[step].k !== playing.tag.slice(5)) stop(); renderCard(); window.scrollTo(0, 0); });
+$('back').addEventListener('click', () => { if (step > 0) step--; if (playing && STEPS[step].k !== playing.tag.slice(5)) stop(); renderCard(); window.scrollTo(0, 0); });
+
+/* ======================= GESTISCI CAMPIONE ED EFFETTI ======================= */
+let sheetKey = null;
+function chainLines(k){ const st = S[k], sec = SEC[k], o = effOpt(k), L = [];
+  L.push('Base: ' + sec.baseFx.slice(0, -1).join(' · '));
+  if (o) L.push('Fonte ' + Math.round((1 - st.mix)*100) + '% ∥ ' + o.fx.join(' → ') + ' ' + Math.round(st.mix*100) + '%');
+  const p = o && st.pitch[st.eff]; if (p) L.push('Risonanze accordate su ' + p.f0.toFixed(1) + ' Hz' + (p.clear ? '' : ' (valore di riserva)'));
+  L.push('Respiro automatico: livello tra −6 e 0 dB, ciclo ' + BREATH[k] + ' s');
+  L.push('Riverbero ' + Math.round(st.wet*100) + '% · livello ' + fmtDb(st.level) + (st.mute ? ' (muto nel mixer)' : ''));
+  L.push('Mixer: delay ' + (st.send ? 'attivo' : 'spento') + ' · temperatura master ' + (M.temp || 'neutra'));
+  return L; }
+function openSheet(k){ sheetKey = k; refreshSheet(); const d = $('sheet'); if (!d.open){ try { d.showModal(); } catch (e) { d.setAttribute('open', ''); } } }
+function refreshSheet(){ if (!sheetKey) return; const k = sheetKey, st = S[k], sec = SEC[k], body = $('sheetBody'); body.setAttribute('style', accStyle(k));
+  body.innerHTML = '<div class="tag"><b></b>' + sec.n + ' · ' + sec.name + '</div><h2 id="sheet-title">Gestisci campione ed effetti</h2>'
+    + '<div class="meta">' + (st.raw ? st.name + ' · ' + (st.raw.length/SR).toFixed(1) + ' s' : 'Nessun suono') + '</div>'
+    + '<div class="row"><label class="btn ghost wide" for="sheet-file">Sostituisci il suono</label><input class="hidden-input" type="file" id="sheet-file" accept="audio/*" capture data-k="' + k + '">'
+    + '<button class="btn ghost wide" type="button" data-sact="example">Usa l’esempio</button></div>'
+    + '<div class="row">' + playBtn('solo-' + k, 'Ascolta solo') + '</div>'
+    + slider('level', 'Livello traccia', -36, 6, 1, st.level, (st.level > 0 ? '+' : '') + st.level + ' dB')
+    + slider('wet', k === 'tonica' ? 'Riverbero di base (dry/wet)' : 'Riverbero (mandata)', 0, 100, 1, Math.round(st.wet*100), Math.round(st.wet*100) + '%')
+    + slider('mix', 'Riconoscibilità: fonte ↔ effetto', 0, 100, 1, Math.round(st.mix*100), st.eff ? Math.round(st.mix*100) + '% effetto' : 'nessun effetto scelto')
+    + '<div class="chain">' + chainLines(k).map((l) => '<div>' + l + '</div>').join('') + '</div>'
+    + '<button class="btn primary" type="button" data-sact="close">Chiudi</button>';
+  refreshPlayButtons(); }
+function slider(id, label, mn, mx, stp, val, out){ return '<div class="ctl"><label for="sl-' + id + '">' + label + '</label><output id="sl-' + id + '-o" for="sl-' + id + '">' + out + '</output><input type="range" id="sl-' + id + '" data-sl="' + id + '" min="' + mn + '" max="' + mx + '" step="' + stp + '" value="' + val + '"></div>'; }
+$('sheetBody').addEventListener('input', (ev) => { const t = ev.target, id = t.dataset.sl; if (!id) return; const k = sheetKey, st = S[k], L = playing && playing.live[k];
+  if (id === 'level'){ st.level = +t.value; liveTrack(k); }
+  if (id === 'wet'){ st.wet = t.value/100; if (L){ L.wet.gain.value = st.wet; if (k === 'tonica') L.dry.gain.value = 1 - st.wet; } }
+  if (id === 'mix'){ st.mix = t.value/100; if (L && L.transG){ L.transG.gain.value = st.mix; L.origG.gain.value = 1 - st.mix; } }
+  $('sl-' + id + '-o').textContent = id === 'level' ? (st.level > 0 ? '+' : '') + st.level + ' dB' : id === 'wet' ? Math.round(st.wet*100) + '%' : (st.eff ? Math.round(st.mix*100) + '% effetto' : 'nessun effetto scelto');
+  const ch = $('sheetBody').querySelector('.chain'); if (ch) ch.innerHTML = chainLines(k).map((l) => '<div>' + l + '</div>').join(''); });
+$('sheetBody').addEventListener('change', async (ev) => { const t = ev.target; if (t.type === 'file') await loadFile(t); });
+$('sheetBody').addEventListener('click', (ev) => { const b = ev.target.closest('[data-act],[data-sact]'); if (!b || b.tagName === 'INPUT') return;
+  if (b.dataset.sact === 'close'){ closeSheet(); return; }
+  if (b.dataset.sact === 'example'){ setSample(sheetKey, synth(sheetKey), EXNAME[sheetKey]); refreshSheet(); restart(); }
+  else if (b.dataset.act === 'play'){ const tag = b.dataset.tag; if (playing && playing.tag === tag) stop(); else play([sheetKey], tag); } });
+function afterSheetClosed(){ sheetKey = null; renderCard(); }
+/* chiusura diretta: il visualizzatore blocca l'invio dei moduli, quindi niente form method="dialog" */
+function closeSheet(){ const d = $('sheet'); if (!d.open && !d.hasAttribute('open')) return;
+  let closed = false; try { d.close(); closed = !d.open; } catch (e) {}
+  if (!closed){ d.removeAttribute('open'); afterSheetClosed(); } }
+$('sheet').addEventListener('close', afterSheetClosed);
+$('sheet').addEventListener('click', (ev) => { if (ev.target === $('sheet')) closeSheet(); });
+
+/* ======================= ESPORTAZIONE ======================= */
+function wav(buf){ const n = buf.length, ch = buf.numberOfChannels, ab = new ArrayBuffer(44 + n*ch*2), v = new DataView(ab), w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n*ch*2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, ch, true); v.setUint32(24, SR, true); v.setUint32(28, SR*ch*2, true); v.setUint16(32, ch*2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n*ch*2, true);
+  const d = []; for (let c = 0; c < ch; c++) d.push(buf.getChannelData(c)); let o = 44;
+  for (let i = 0; i < n; i++) for (let c = 0; c < ch; c++){ const s = Math.max(-1, Math.min(1, d[c][i])); v.setInt16(o, s < 0 ? s*0x8000 : s*0x7FFF, true); o += 2; } return new Uint8Array(ab); }
+const CRC = (() => { const t = new Uint32Array(256); for (let i = 0; i < 256; i++){ let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[i] = c >>> 0; } return t; })();
+function crc32(u){ let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(files){ const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  for (const f of files){ const name = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length, h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint32(14, crc, true); h.setUint32(18, sz, true); h.setUint32(22, sz, true); h.setUint16(26, name.length, true); parts.push(new Uint8Array(h.buffer), name, f.data);
+    const cd = new DataView(new ArrayBuffer(46)); cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint32(16, crc, true); cd.setUint32(20, sz, true); cd.setUint32(24, sz, true); cd.setUint16(28, name.length, true); cd.setUint32(42, off, true);
+    central.push(new Uint8Array(cd.buffer), name); off += 30 + name.length + sz; }
+  const cs = central.reduce((a, u) => a + u.length, 0), e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], { type: 'application/zip' }); }
+/* Salvataggio in due tempi: prima si prepara l'archivio (calcolo lungo), poi un secondo tocco lo salva.
+   Il secondo tocco serve ai browser del telefono, che accettano un download o una condivisione solo
+   come risposta immediata a un gesto dell'utente. */
+let downloads = null, downloadsChecked = false, prepared = null, busy = false;
+if (IN_VIEWER && window.claude.use) window.claude.use('downloads').then((d) => { downloads = d; downloadsChecked = true; if (STEPS[step].t === 'lascia') renderCard(); }).catch(() => { downloadsChecked = true; });
+function exportSig(){ return JSON.stringify([KEYS.map((k) => { const st = S[k]; return [st.ver, st.keep, st.eff, st.level, st.wet, st.mix, st.send, st.mute]; }), M]); }
+function canShareFiles(){ try { return !IN_VIEWER && !!navigator.canShare && navigator.canShare({ files: [new File([new Uint8Array(1)], 'x.zip', { type: 'application/zip' })] }); } catch (e) { return false; } }
+function saveHtml(){
+  if (prepared && prepared.sig !== exportSig()) prepared = null;
+  if (IN_VIEWER && downloadsChecked && !downloads) return '<p class="status warn">In questa vista di Claude il salvataggio dei file non è disponibile. Apri la web app dal browser (per esempio da GitHub Pages) per salvare.</p>';
+  if (!prepared) return '<button class="btn acc" type="button" data-act="export" id="exportBtn"' + (busy ? ' disabled' : '') + '>' + (busy ? 'Preparo l’archivio…' : 'Prepara la fotografia sonora (.zip)') + '</button>';
+  const mb = (prepared.blob.size/1048576).toFixed(1);
+  return '<p class="small">Archivio pronto: ' + prepared.fname + ', ' + mb + ' MB.</p><div class="row">'
+    + '<button class="btn acc wide" type="button" data-act="save">Salva il file</button>'
+    + (canShareFiles() ? '<button class="btn ghost wide" type="button" data-act="share">Condividi o salva su File</button>' : '') + '</div>';
+}
+function errText(e){ const c = e && e.code;
+  if (c === 'declined') return 'Salvataggio annullato.';
+  if (c === 'too_large') return 'L’archivio è troppo grande per questa vista: lascia meno parti e riprova.';
+  if (c === 'rejected_extension' || c === 'extension_not_enabled') return 'In questa vista non si possono salvare file .zip.';
+  if (c === 'rate_limited') return 'C’è già una richiesta di salvataggio aperta: rispondi a quella e riprova.';
+  if (c === 'unavailable' || c === 'not_granted' || c === 'capability_disabled' || c === 'capability_removed') return 'Il salvataggio non è disponibile in questa vista.';
+  return 'Salvataggio non riuscito' + (c ? ' (codice ' + c + ')' : e && e.message ? ' (' + e.message + ')' : '') + '.'; }
+async function saveZip(){
+  if (!prepared) return; const { blob, fname } = prepared;
+  try {
+    if (IN_VIEWER){ if (!downloads){ setStatus('Il salvataggio non è disponibile in questa vista.', true); return; } await downloads.save({ filename: fname, data: blob }); setStatus('Archivio salvato.'); return; }
+    const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = fname; a.rel = 'noopener'; document.body.appendChild(a); a.click();
+    setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 60000);
+    setStatus('Download avviato. Su iPhone, se non compare, usa «Condividi o salva su File».');
+  } catch (e) { setStatus(errText(e), true); }
+}
+async function shareZip(){
+  if (!prepared) return;
+  try { await navigator.share({ files: [new File([prepared.blob], prepared.fname, { type: 'application/zip' })], title: 'Fotografia sonora' }); setStatus('Archivio condiviso.'); }
+  catch (e) { setStatus(e && e.name === 'AbortError' ? 'Condivisione annullata.' : 'Condivisione non riuscita: usa «Salva il file».', true); }
+}
+async function exportZip(){
+  const keys = KEYS.filter((k) => S[k].keep && S[k].raw); if (!keys.length){ setStatus('Scegli almeno una parte da lasciare.', true); return; }
+  busy = true; renderCard();
+  try { setStatus('Calcolo il mix e le tracce (30 s): può richiedere qualche secondo…');
+    const files = [{ name: '0_mix.wav', data: wav(await renderKeys(keys, 30)) }];
+    for (const k of keys) files.push({ name: SEC[k].n + '_' + k + '.wav', data: wav(await renderKeys([k], 30)) });
+    const info = { master: { temperatura: M.temp || 'neutro', volume_dB: M.vol } }; for (const k of KEYS){ const st = S[k], sh = shapeOf(k), o = effOpt(k);
+      info[k] = { lasciata: st.keep && !!st.raw, forma: sh ? sh.sides + ' lati (' + sh.card + ')' : null, postura: sh ? POSTURE[sh.sides].t : null, suggerimento: sh && st.task != null ? sh.tasks[st.task] : null, sorgente: st.name, risposta: o ? o.t : null, catena: o ? o.fx : null, respiro_s: BREATH[k], livello_dB: st.level, delay_mixer: st.send, muto_nel_mixer: st.mute, riverbero: st.wet, riconoscibilita_effetto: st.mix }; }
+    files.push({ name: 'scelte.json', data: new TextEncoder().encode(JSON.stringify(info, null, 2)) });
+    const d = new Date(), stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '-' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
+    prepared = { blob: zip(files), fname: 'fotografia-sonora-' + stamp + '.zip', sig: exportSig() };
+    busy = false; renderCard(); setStatus('Archivio pronto: tocca «Salva il file».');
+  } catch (e) { busy = false; renderCard(); setStatus('Non riesco a preparare l’archivio' + (e && e.message ? ' (' + e.message + ')' : '') + '.', true); }
+}
+
+renderCard();
+window.__fs = { S, SEC, ensureProc, renderKeys, setSample, synth, KEYS };
+})();
+</script>
+</body></html>
