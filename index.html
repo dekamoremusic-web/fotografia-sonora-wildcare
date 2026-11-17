@@ -254,8 +254,8 @@ const SEC = {
 };
 const KEYS = ['tonica', 'segnale', 'impronta'];
 const S = {
-  tonica:   { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: -10, wet: 0.6, mix: 0.7, mute: false, send: 0, keep: true, proc: {}, pitch: {}, ver: 0 },
-  segnale:  { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: -6, wet: 0.15, mix: 0.65, mute: false, send: 0, keep: true, proc: {}, pitch: {}, ver: 0 },
+  tonica:   { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: -2, wet: 0.6, mix: 0.85, mute: false, send: 0, keep: true, proc: {}, pitch: {}, ver: 0 },
+  segnale:  { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: -4, wet: 0.15, mix: 0.65, mute: false, send: 0, keep: true, proc: {}, pitch: {}, ver: 0 },
   impronta: { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: 0, wet: 0.05, mix: 0.6, mute: false, send: 0, keep: true, proc: {}, pitch: {}, ver: 0 }
 };
 /* master: temperatura finale e volume generale, regolati nel mixer */
@@ -526,8 +526,10 @@ function buildSlot(c, key, out, t0, live, sendBus, ignoreMute, liveEdit){
 }
 /* fonte e catene: ogni effetto riceve mix × peso; la fonte originale prende il resto */
 function setG(p, v, c){ if (c) p.setTargetAtTime(v, c.currentTime, 0.04); else p.value = v; }
-function setMixGains(st, origG, transGs, c){ const ws = stWeights(st); let tot = 0;
-  for (const v in transGs){ const g = st.mix*(ws[v] || 0); tot += g; setG(transGs[v].gain, g, c); }
+/* compensazione: alcune trasformazioni della tonica escono più basse del suono originale e si sentirebbero appena */
+const MAKEUP = { 'tonica.A': 1.9, 'tonica.B': 2.6, 'tonica.C': 1.9 };
+function setMixGains(st, origG, transGs, c){ const ws = stWeights(st), key = KEYS.find((k) => S[k] === st); let tot = 0;
+  for (const v in transGs){ const g = st.mix*(ws[v] || 0); tot += g; setG(transGs[v].gain, g*(MAKEUP[key + '.' + v] || 1), c); }
   setG(origG.gain, Math.max(0, 1 - tot), c); }
 /* master: tracce → [delay in feedback condiviso, solo ripetizioni] → temperatura (shelving) → volume → limitatore */
 function buildAll(c, dest, keys, opts){
@@ -817,7 +819,7 @@ function setFoot(t, warn){ const f = $('foot'); clearTimeout(footTimer); f.textC
 function setStatus(t, warn){ const f = $('foot'), def = f.dataset.def || ''; clearTimeout(footTimer); f.textContent = t || def; f.classList.remove('warn'); if (warn){ void f.offsetWidth; f.classList.add('warn'); }
   if (t) footTimer = setTimeout(() => { f.textContent = f.dataset.def || def; f.classList.remove('warn'); }, 4200); }
 function fmtDb(v){ return (v > 0 ? '+' : '') + v + ' dB'; }
-function playTag(){ const s = STEPS[step]; if (s.k) return 'solo-' + s.k; if (s.t === 'mixer') return 'all'; if (s.t === 'lascia') return 'keep'; return null; }
+function playTag(){ const s = STEPS[step]; if (s.t === 'registra') return 'raw-' + s.k; if (s.k) return 'solo-' + s.k; if (s.t === 'mixer') return 'all'; if (s.t === 'lascia') return 'keep'; return null; }
 function updateKeys(){
   const s = STEPS[step], tag = playTag(), why = canNext();
   const canPlay = !!tag && (s.k ? !!S[s.k].raw : KEYS.some((k) => S[k].raw && (tag !== 'keep' || S[k].keep)));
@@ -1034,7 +1036,7 @@ function chooseShape(k, id){ const st = S[k]; st.shape = id; st.task = Math.floo
 $('lcdBody').addEventListener('click', (ev) => {
   const b = ev.target.closest('[data-act]'); if (!b || b.disabled) return; const s = STEPS[step], act = b.dataset.act;
   if (act === 'shape'){ if (S[s.k].shape !== b.dataset.v) chooseShape(s.k, b.dataset.v); }
-  else if (act === 'example'){ setSample(s.k, synth(s.k), EXNAME[s.k]); render(); restart(); }
+  else if (act === 'example'){ setSample(s.k, synth(s.k), EXNAME[s.k]); render(); if (playing) playRaw(s.k); }
   else if (act === 'quick') quickFill();
   else if (act === 'file') openPicker();
   else if (act === 'sfx'){ SFX.set(!SFX.on); b.textContent = 'Suoni dei tasti: ' + (SFX.on ? 'sì' : 'no'); b.setAttribute('aria-pressed', String(SFX.on)); }
@@ -1045,18 +1047,23 @@ $('lcdBody').addEventListener('click', (ev) => {
 });
 $('lcdBody').addEventListener('scroll', () => { if (SCROLLS(STEPS[step].t)) setLeds(false); }, { passive: true });
 $('file-in').addEventListener('change', async (ev) => { const t = ev.target, f = t.files && t.files[0]; if (!f) return; const k = STEPS[step].k; if (!k) return; setStatus('Apro ' + f.name + '…');
-  try { setSample(k, await decodeToMono(await f.arrayBuffer()), f.name); render(); restart(); setStatus('Caricato: ' + f.name); }
+  try { setSample(k, await decodeToMono(await f.arrayBuffer()), f.name); render(); if (playing) playRaw(k); setStatus('Caricato: ' + f.name); }
   catch (e) { setStatus('Il file non si apre: prova WAV, MP3 o M4A', true); } t.value = ''; });
 async function decodeToMono(ab){ const c = ensureCtx(), buf = await c.decodeAudioData(ab), n = buf.length, x = new Float32Array(n);
   for (let ch = 0; ch < buf.numberOfChannels; ch++){ const dd = buf.getChannelData(ch); for (let i = 0; i < n; i++) x[i] += dd[i]/buf.numberOfChannels; } return x; }
 
+/* anteprima della registrazione: il suono così com'è stato catturato, in loop, senza catena di effetti */
+function playRaw(k){ const st = S[k]; if (!st.raw) return; const c = ensureCtx(); stop(); const bus = gn(c, 1), stops = [], t0 = c.currentTime + 0.03;
+  bus.connect(c.destination); src(c, st.raw, t0, stops).connect(gn(c, 1.4)).connect(bus);
+  playing = { stops, live: {}, keys: [k], tag: 'raw-' + k, bus, liveEdit: false }; updateKeys(); }
 function go(to){ const was = STEPS[step].k; step = to; const now = STEPS[step];
-  if (playing && !(now.k && playing.tag === 'solo-' + now.k)) stop();
+  if (playing && !(now.k && playing.tag === 'solo-' + now.k && now.t !== 'registra')) stop();
   render(); if (now.k !== was) $('lcdBody').scrollTop = 0; }
 $('kNext').addEventListener('click', () => { const why = canNext(); if (why){ setStatus(why, true); SFX.play('error'); return; } SFX.play(step === 0 ? 'boot' : 'next'); go(step === STEPS.length - 1 ? 0 : step + 1); });
 $('kBack').addEventListener('click', () => { if (step > 0){ SFX.play('back'); go(step - 1); } else SFX.play('error'); });
 $('kPlay').addEventListener('click', () => { const tag = playTag(); if ($('kPlay').getAttribute('aria-disabled') === 'true'){ setStatus(tag && STEPS[step].k ? 'Prima registra un suono' : 'Non c’è ancora niente da ascoltare', true); SFX.play('error'); return; }
   if (playing && playing.tag === tag){ SFX.play('stop'); stop(); return; } SFX.play('play');
+  if (tag.startsWith('raw-')){ playRaw(tag.slice(4)); return; }
   const keys = tag === 'all' ? KEYS : tag === 'keep' ? KEYS.filter((k) => S[k].keep) : [tag.slice(5)];
   play(keys, tag, STEPS[step].t === 'effetto'); });
 $('kRec').addEventListener('click', () => { if ($('kRec').getAttribute('aria-disabled') === 'true'){ setStatus('Rec funziona solo nella schermata di registrazione', true); SFX.play('error'); return; } SFX.play(recState ? 'stop' : 'rec'); record(STEPS[step].k); });
