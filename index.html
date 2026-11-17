@@ -93,7 +93,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 
 /* forma d'onda città e superficie */
 .city{width:100%;aspect-ratio:2/1.15;display:block}
-.plot{width:100%;aspect-ratio:1.25;display:block;flex:none;border-radius:14px;border:1.5px solid var(--ink)}
+.plot{width:100%;aspect-ratio:1.25;display:block;flex:none;image-rendering:pixelated}
 .dm{width:100%;aspect-ratio:2/1;display:block;flex:none}
 .recbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .padwrap{position:relative;width:100%;max-width:min(100%,40vh,40dvh);margin:0 auto;padding:16px}
@@ -664,33 +664,50 @@ function loopStroke(g, x0, y0, x1, y1, r, width, col, rnd, wob){
     const x = x0 + ux*s + Math.cos(a)*rr*0.75 + vx*Math.sin(a)*rr + j, y = y0 + uy*s + Math.sin(a)*rr*0.75*uy + vy*Math.sin(a)*rr + j;
     if (i === 0) g.moveTo(x, y); else g.lineTo(x, y); }
   g.stroke(); }
+/* Lo schermo è «tecnologicamente limitato»: il disegno a pennarello viene calcolato fuori schermo e poi
+   ridotto a una griglia LCD di 100 × 80 pixel con due soli toni d'inchiostro. Le bande di colore diventano
+   retini a densità diverse (dithering ordinato 4 × 4), l'onda e il mirino restano pieni con un piccolo alone. */
+const PLOT_C = 100, PLOT_R = 80, BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 function plotFrame(now){
   const P = plot, cv = $('plot'); if (!P || !cv || !cv.isConnected){ plot = null; return; }
   P.raf = requestAnimationFrame(plotFrame);
-  const t = (now - P.t0)/1000, frame = Math.floor(t*10); if (frame === P.last && !REDUCED) return; P.last = frame;
-  const dpr = window.devicePixelRatio || 1, r = cv.getBoundingClientRect(), W = Math.max(1, Math.round(r.width*dpr)), H = Math.max(1, Math.round(r.height*dpr));
-  if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
-  const g = cv.getContext('2d'), cyc = t % 5, snap = cyc > 3.6 && cyc < 4.6, rnd = prand(1 + (frame % 3)*7919), U = Math.min(W, H);
-  // durante lo scatto l'immagine resta ferma sull'ultimo disegno
-  const ft = snap && !REDUCED ? Math.floor(t - cyc + 3.6) : (REDUCED ? 0 : t);
-  g.fillStyle = '#F4F1E6'; g.fillRect(0, 0, W, H);
-  // bande diagonali di colore che scorrono
-  const bw = U*0.16, dirx = Math.cos(-1.05), diry = Math.sin(-1.05), nx = -diry, ny = dirx, D = Math.hypot(W, H), off = (ft*bw*0.55) % (bw*PLOT_COLS.length);
-  for (let k = -2; k < PLOT_COLS.length*2 + 2; k++){ const c = PLOT_COLS[((k % PLOT_COLS.length) + PLOT_COLS.length) % PLOT_COLS.length], d = k*bw*0.86 - off - D*0.15;
-    const cx = W/2 + nx*(d - D/2 + bw*2), cy = H/2 + ny*(d - D/2 + bw*2); if (Math.abs(d - D/2 + bw*2) > D*0.75) continue;
-    loopStroke(g, cx - dirx*D*0.7, cy - diry*D*0.7, cx + dirx*D*0.7, cy + diry*D*0.7, bw*0.42, bw*0.36, c, rnd, U*0.006); }
-  // onda sonora nera, disegnata a riccioli: l'ampiezza respira come un suono vivo
-  const mid = H*0.52, x0 = W*0.1, x1 = W*0.9, N = 15;
-  g.save(); g.strokeStyle = '#15171C';
-  for (let i = 0; i < N; i++){ const x = x0 + (x1 - x0)*(i + 0.5)/N, env = Math.sin(Math.PI*(i + 0.5)/N), a = env*(0.35 + 0.65*Math.abs(Math.sin(ft*1.7 + i*0.55)*Math.cos(ft*0.6 + i*0.21)))*H*0.3;
-    loopStroke(g, x, mid - a - U*0.01, x, mid + a + U*0.01, U*0.021, U*0.011, '#15171C', rnd, U*0.004); }
-  g.restore();
-  // mirino: quattro angoli che si chiudono sull'immagine, poi lo scatto
-  const close = snap ? 1 : (cyc > 3 && cyc <= 3.6 ? (cyc - 3)/0.6 : (cyc >= 4.6 ? Math.max(0, 1 - (cyc - 4.6)/0.4) : 0));
-  if (close > 0 || REDUCED){ const m = (REDUCED ? 0.08 : 0.02 + 0.06*close), L = U*0.12;
-    const corners = [[W*m, H*m, 1, 1], [W*(1 - m), H*m, -1, 1], [W*m, H*(1 - m), 1, -1], [W*(1 - m), H*(1 - m), -1, -1]];
-    for (const [cx, cy, sx, sy] of corners){ loopStroke(g, cx, cy, cx + sx*L, cy, U*0.012, U*0.016, '#15171C', rnd, U*0.003); loopStroke(g, cx, cy, cx, cy + sy*L, U*0.012, U*0.016, '#15171C', rnd, U*0.003); } }
-  if (snap && cyc < 3.72){ g.fillStyle = 'rgba(255,255,255,' + (1 - (cyc - 3.6)/0.12).toFixed(2) + ')'; g.fillRect(0, 0, W, H); }
+  const t = (now - P.t0)/1000, frame = Math.floor(t*10); if (frame === P.last) return; P.last = frame;
+  const OW = PLOT_C*2, OH = PLOT_R*2;
+  if (!P.a){ P.a = document.createElement('canvas'); P.b = document.createElement('canvas'); P.a.width = P.b.width = OW; P.a.height = P.b.height = OH; }
+  const ga = P.a.getContext('2d', { willReadFrequently: true }), gb = P.b.getContext('2d', { willReadFrequently: true }), W = OW, H = OH, U = Math.min(W, H);
+  const cyc = t % 5, snap = cyc > 3.6 && cyc < 4.6, rnd = prand(1 + (frame % 3)*7919), ft = REDUCED ? 0 : (snap ? Math.floor(t - cyc + 3.6) : t);
+  // bande diagonali che scorrono (fuori schermo, a colori)
+  ga.fillStyle = '#FFFFFF'; ga.fillRect(0, 0, W, H);
+  const bw = U*0.16, dirx = Math.cos(-1.05), diry = Math.sin(-1.05), nx = -diry, ny = dirx, D = Math.hypot(W, H), off = (ft*bw*0.55) % (bw*0.86*8);
+  const DENS = [0.06, 0.62, 0.22, 0.92, 0.38, 0.75, 0.14, 0.5], NB = DENS.length;
+  for (let k = -2; k < NB*3 + 2; k++){ const dv = DENS[((k % NB) + NB) % NB], gv = Math.round((1 - dv)*255), c = 'rgb(' + gv + ',' + gv + ',' + gv + ')', d = k*bw*0.86 - off - D*0.15;
+    const q = d - D/2 + bw*2; if (Math.abs(q) > D*0.75) continue; const cx = W/2 + nx*q, cy = H/2 + ny*q;
+    loopStroke(ga, cx - dirx*D*0.7, cy - diry*D*0.7, cx + dirx*D*0.7, cy + diry*D*0.7, bw*0.42, bw*0.36, c, rnd, U*0.012); }
+  // onda sonora e mirino (fuori schermo, solo forma)
+  gb.clearRect(0, 0, W, H);
+  const mid = H*0.52, x0 = W*0.12, x1 = W*0.88, N = 11;
+  gb.fillStyle = '#000';
+  for (let i = 0; i < N; i++){ const x = Math.round(x0 + (x1 - x0)*(i + 0.5)/N), env = 0.25 + 0.75*Math.sin(Math.PI*(i + 0.5)/N), a = Math.round(env*(0.3 + 0.7*Math.abs(Math.sin(ft*1.7 + i*0.9)*Math.cos(ft*0.6 + i*0.37)))*H*0.34);
+    const bwd = Math.max(4, Math.round(W*0.034)), jx = Math.round((rnd() - 0.5)*1.4); gb.fillRect(x - Math.round(bwd/2) + jx, mid - a, bwd, 2*a + 2); }
+  const close = REDUCED ? 1 : snap ? 1 : (cyc > 3 && cyc <= 3.6 ? (cyc - 3)/0.6 : (cyc >= 4.6 ? Math.max(0, 1 - (cyc - 4.6)/0.4) : 0));
+  if (close > 0){ const m = 0.03 + 0.06*close, L = U*0.14;
+    for (const [cx, cy, sx, sy] of [[W*m, H*m, 1, 1], [W*(1 - m), H*m, -1, 1], [W*m, H*(1 - m), 1, -1], [W*(1 - m), H*(1 - m), -1, -1]]){
+      loopStroke(gb, cx, cy, cx + sx*L, cy, U*0.014, U*0.02, '#000', rnd, U*0.004); loopStroke(gb, cx, cy, cx, cy + sy*L, U*0.014, U*0.02, '#000', rnd, U*0.004); } }
+  // riduzione alla griglia LCD
+  const A = ga.getImageData(0, 0, W, H).data, B = gb.getImageData(0, 0, W, H).data, bAt = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : B[(y*W + x)*4 + 3];
+  const dpr = window.devicePixelRatio || 1, r = cv.getBoundingClientRect(), CW = Math.max(1, Math.round(r.width*dpr)), CH = Math.max(1, Math.round(r.height*dpr));
+  if (cv.width !== CW || cv.height !== CH){ cv.width = CW; cv.height = CH; }
+  const g = cv.getContext('2d'), pw = CW/PLOT_C, ph = CH/PLOT_R, gap = Math.max(0.6, pw*0.12), flash = snap && cyc < 3.75 && !REDUCED;
+  g.clearRect(0, 0, CW, CH);
+  for (let y = 0; y < PLOT_R; y++) for (let x = 0; x < PLOT_C; x++){
+    const sx = x*2 + 1, sy = y*2 + 1, X = x*pw + gap/2, Y = y*ph + gap/2, w = pw - gap, h = ph - gap;
+    g.fillStyle = 'rgba(21,23,28,.07)'; g.fillRect(X, Y, w, h);
+    let tone = 0;
+    if (flash) tone = 2;
+    else if (bAt(sx, sy) > 110) tone = 2;
+    else if (bAt(sx - 2, sy) > 110 || bAt(sx + 2, sy) > 110 || bAt(sx, sy - 2) > 110 || bAt(sx, sy + 2) > 110) tone = 0;
+    else { const i = (sy*W + sx)*4, lum = (0.299*A[i] + 0.587*A[i + 1] + 0.114*A[i + 2])/255, dens = (1 - lum)*0.98; tone = dens*16 > BAYER[(y % 4)*4 + (x % 4)] ? 1 : 0; }
+    if (tone){ g.fillStyle = tone === 2 ? '#15171C' : 'rgba(21,23,28,.5)'; g.fillRect(X, Y, w, h); } }
   if (REDUCED){ cancelAnimationFrame(P.raf); P.raf = 0; }
 }
 
@@ -744,7 +761,7 @@ function render(){
       + '<p class="txt">Ogni sezione comincia da una forma, che ti dice come ascoltare.</p>'
       + '<ul class="legend"><li>' + svgShape('RG', '#1f3a6b', 22) + '<span><strong>Sgabello</strong>: fermati e ascolta seduto.</span></li><li>' + svgShape('T', '#e07a1f', 22) + '<span><strong>Cono</strong>: ascolta in una direzione.</span></li></ul>'
       + '<div class="row"><button class="lcdbtn" type="button" data-act="quick">Prova veloce</button><button class="lcdbtn" type="button" data-act="sfx" aria-pressed="' + SFX.on + '">Suoni dei tasti: ' + (SFX.on ? 'sì' : 'no') + '</button></div>';
-    foot = 'Avanti per iniziare';
+    foot = 'Ruota per leggere · Avanti per iniziare';
   }
   else if (s.t === 'forma'){
     h = '<h2 id="scr-title">Scegli una forma</h2><canvas class="dm" id="dm" role="img" aria-label="Display a punti con la forma scelta"></canvas><div class="legend" role="group" aria-label="Forme">'
@@ -756,7 +773,7 @@ function render(){
     if (st.task == null || st.task >= sh.tasks.length) st.task = Math.floor(Math.random()*sh.tasks.length);
     h = '<div class="posture">' + svgShape(sh.poly, sh.color, 30) + '<span><strong>' + POSTURE[sh.sides].n + ': ' + POSTURE[sh.sides].t.toLowerCase() + '.</strong> ' + POSTURE[sh.sides].d + '</span></div>'
       + '<h2 id="scr-title">Il tuo suggerimento</h2><p class="quote">' + sh.tasks[st.task] + '</p>';
-    foot = 'Quando hai trovato il suono · Avanti';
+    foot = 'Ruota per leggere · Avanti quando hai il suono';
   }
   else if (s.t === 'registra'){ const sh = shapeOf(k);
     h = '<h2 id="scr-title" class="sr">Registra il suono</h2><p class="txt">' + sh.tasks[st.task || 0] + '</p>'
@@ -982,9 +999,11 @@ $('lcdBody').addEventListener('keydown', (ev) => { const f = ev.target.closest('
 
 /* ======================= ROTELLA ======================= */
 let wheelPhase = 0;
-function wheelActive(){ const t = STEPS[step].t; return t === 'forma' || (t === 'effetto' && !!S[STEPS[step].k].pad); }
+function wheelActive(){ const t = STEPS[step].t; return t === 'intro' || t === 'compito' || t === 'forma' || (t === 'effetto' && !!S[STEPS[step].k].pad); }
+const SCROLLS = (t) => t === 'intro' || t === 'compito';
+function scrollLevel(){ const b = $('lcdBody'), m = b.scrollHeight - b.clientHeight; return m > 0 ? b.scrollTop/m : 0; }
 /* LED a sinistra della rotella: dieci punti, gli ultimi due rossi */
-function wheelLevel(){ const s = STEPS[step]; if (s.t === 'effetto' && S[s.k].pad) return S[s.k].mix;
+function wheelLevel(){ const s = STEPS[step]; if (SCROLLS(s.t)) return scrollLevel(); if (s.t === 'effetto' && S[s.k].pad) return S[s.k].mix;
   if (s.t === 'forma'){ const sh = SEC[s.k].shapes, i = sh.findIndex((x) => x.id === S[s.k].shape); return i < 0 ? 0 : (i + 1)/sh.length; } return 0; }
 let ledsTimer = 0;
 function setLeds(hot){ const L = $('leds'); if (!L.children.length) for (let i = 0; i < 10; i++){ const e = document.createElement('i'); if (i >= 8) e.dataset.hi = '1'; L.appendChild(e); }
@@ -1003,7 +1022,8 @@ function wheelStep(dir){
   if (!wheelActive()){ setStatus('La rotella qui non ha funzioni', true); SFX.play('error'); return; }
   wheelPhase = (wheelPhase + dir*0.16 + Math.PI) % Math.PI; drawWheel();
   const s = STEPS[step];
-  if (s.t === 'forma'){ const sh = SEC[s.k].shapes, st = S[s.k], i = sh.findIndex((x) => x.id === st.shape), ni = i < 0 ? 0 : Math.max(0, Math.min(sh.length - 1, i - dir));
+  if (SCROLLS(s.t)){ const b = $('lcdBody'), before = b.scrollTop; b.scrollBy({ top: -dir*56, behavior: REDUCED ? 'auto' : 'smooth' }); setTimeout(() => setLeds(false), 260); if (Math.abs(b.scrollHeight - b.clientHeight) < 2 || (dir > 0 && before <= 0) || (dir < 0 && before >= b.scrollHeight - b.clientHeight - 1)) SFX.play('blip'); else SFX.play('tick', scrollLevel()); }
+  else if (s.t === 'forma'){ const sh = SEC[s.k].shapes, st = S[s.k], i = sh.findIndex((x) => x.id === st.shape), ni = i < 0 ? 0 : Math.max(0, Math.min(sh.length - 1, i - dir));
     if (sh[ni].id !== st.shape) chooseShape(s.k, sh[ni].id); else SFX.play('tick', wheelLevel()); }
   else if (s.t === 'effetto'){ const st = S[s.k]; st.mix = Math.round(Math.max(0, Math.min(1, st.mix + dir*0.05))*100)/100; liveMix(s.k); updateReadout(); SFX.play('tick', st.mix); }
   setLeds(true); wheelAria(); }
@@ -1033,6 +1053,7 @@ $('lcdBody').addEventListener('click', (ev) => {
   else if (act === 'save') saveZip();
   else if (act === 'share') shareZip();
 });
+$('lcdBody').addEventListener('scroll', () => { if (SCROLLS(STEPS[step].t)) setLeds(false); }, { passive: true });
 $('file-in').addEventListener('change', async (ev) => { const t = ev.target, f = t.files && t.files[0]; if (!f) return; const k = STEPS[step].k; if (!k) return; setStatus('Apro ' + f.name + '…');
   try { setSample(k, await decodeToMono(await f.arrayBuffer()), f.name); render(); restart(); setStatus('Caricato: ' + f.name); }
   catch (e) { setStatus('Il file non si apre: prova WAV, MP3 o M4A', true); } t.value = ''; });
