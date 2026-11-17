@@ -578,7 +578,7 @@ function zip(files){ const enc = new TextEncoder(), parts = [], central = []; le
 /* bip a 8 bit da onde quadre, come una console portatile: nessun file audio */
 const SFX = (() => {
   let on = true, g = null; try { on = localStorage.getItem('fs-suoni') !== '0'; } catch (e) {}
-  function out(){ if (!on) return null; const c = ensureCtx(); if (!g){ g = c.createGain(); g.gain.value = 0.16; g.connect(c.destination); } return c; }
+  function out(){ if (!on) return null; const c = ensureCtx(); if (!g){ g = c.createGain(); g.gain.value = 0.05; g.connect(c.destination); } return c; }
   function tone(f, dur, o){ o = o || {}; const c = out(); if (!c) return; const t0 = c.currentTime + 0.005 + (o.when || 0), osc = c.createOscillator(), e = c.createGain();
     osc.type = o.type || 'square'; osc.frequency.setValueAtTime(f, t0); if (o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, t0 + dur);
     e.gain.setValueAtTime(0.0001, t0); e.gain.linearRampToValueAtTime(o.vol || 0.6, t0 + 0.004); e.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
