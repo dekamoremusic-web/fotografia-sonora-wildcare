@@ -1149,13 +1149,31 @@ function wheelStep(dir){
 function chooseShape(k, id){ const st = S[k]; st.shape = id; st.task = Math.floor(Math.random()*shapeOf(k).tasks.length);
   document.querySelectorAll('[data-act=shape]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === id)));
   dmShow(shapeKind(k, id), true); SFX.play('select'); updateKeys(); wheelAria(); }
-(function bindWheel(){ const w = $('wheel'); let y0 = null, acc = 0, moved = false;
-  w.addEventListener('pointerdown', (ev) => { y0 = ev.clientY; acc = 0; moved = false; setLeds(true); try { w.setPointerCapture(ev.pointerId); } catch (e) {} });
-  w.addEventListener('pointermove', (ev) => { if (y0 == null) return; acc += y0 - ev.clientY; y0 = ev.clientY; while (Math.abs(acc) >= 18){ const dd = Math.sign(acc); wheelStep(dd); acc -= dd*18; moved = true; } });
-  w.addEventListener('pointerup', (ev) => { if (y0 != null && !moved){ const r = w.getBoundingClientRect(); wheelStep(ev.clientY < r.top + r.height/2 ? 1 : -1); } y0 = null; });
+/* Sulle schermate di testo la rotella scorre la pagina in modo continuo: ogni pixel di trascinamento sposta
+   la pagina di 3 pixel (verso l'alto = pagina verso il basso) e al rilascio resta l'inerzia, come un rullo vero.
+   Sulle altre schermate scatta per passi. */
+const SCROLL_GAIN = 3;
+let wheelInertia = 0, scrollTickAcc = 0;
+function scrollByWheel(dy){ const b = $('lcdBody'), before = b.scrollTop; b.scrollTop += dy; const moved = b.scrollTop - before;
+  wheelPhase = ((wheelPhase + moved*0.004) % Math.PI + Math.PI) % Math.PI; drawWheel(); setLeds(true);
+  scrollTickAcc += Math.abs(moved); if (scrollTickAcc > 70){ scrollTickAcc = 0; SFX.play('tick', scrollLevel()); }
+  return moved; }
+(function bindWheel(){ const w = $('wheel'); let y0 = null, acc = 0, moved = false, vel = 0, lastT = 0;
+  const stopInertia = () => { if (wheelInertia){ cancelAnimationFrame(wheelInertia); wheelInertia = 0; } };
+  w.addEventListener('pointerdown', (ev) => { stopInertia(); y0 = ev.clientY; acc = 0; moved = false; vel = 0; lastT = performance.now(); setLeds(true); try { w.setPointerCapture(ev.pointerId); } catch (e) {} });
+  w.addEventListener('pointermove', (ev) => { if (y0 == null) return; const dy = y0 - ev.clientY; y0 = ev.clientY;
+    if (SCROLLS(STEPS[step].t)){ if (Math.abs(dy) > 0){ moved = moved || Math.abs(dy) > 1; const now = performance.now(), dt = Math.max(8, now - lastT); lastT = now;
+        const d = dy*SCROLL_GAIN; scrollByWheel(d); vel = 0.8*vel + 0.2*(d/dt*16); } return; }
+    acc += dy; while (Math.abs(acc) >= 14){ const dd = Math.sign(acc); wheelStep(dd); acc -= dd*14; moved = true; } });
+  w.addEventListener('pointerup', (ev) => { const was = y0 != null; y0 = null; if (!was) return;
+    if (!moved){ const r = w.getBoundingClientRect(), dir = ev.clientY < r.top + r.height/2 ? 1 : -1;
+      if (SCROLLS(STEPS[step].t)){ const b = $('lcdBody'); b.scrollBy({ top: dir*180, behavior: REDUCED ? 'auto' : 'smooth' }); SFX.play('tick', scrollLevel()); wheelPhase = (wheelPhase + dir*0.3 + Math.PI) % Math.PI; drawWheel(); setTimeout(() => setLeds(true), 300); }
+      else wheelStep(dir); return; }
+    if (SCROLLS(STEPS[step].t) && !REDUCED && Math.abs(vel) > 1){ const run = () => { vel *= 0.94; if (Math.abs(vel) < 0.5 || scrollByWheel(vel) === 0){ wheelInertia = 0; return; } wheelInertia = requestAnimationFrame(run); }; wheelInertia = requestAnimationFrame(run); } });
   w.addEventListener('pointercancel', () => { y0 = null; });
-  w.addEventListener('wheel', (ev) => { ev.preventDefault(); wheelStep(ev.deltaY < 0 ? 1 : -1); }, { passive: false });
-  w.addEventListener('keydown', (ev) => { const dd = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[ev.key]; if (dd){ ev.preventDefault(); wheelStep(dd); } });
+  w.addEventListener('wheel', (ev) => { ev.preventDefault(); if (SCROLLS(STEPS[step].t)){ stopInertia(); scrollByWheel(-ev.deltaY*1.5); return; } wheelStep(ev.deltaY < 0 ? 1 : -1); }, { passive: false });
+  w.addEventListener('keydown', (ev) => { const dd = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[ev.key]; if (!dd) return; ev.preventDefault();
+    if (SCROLLS(STEPS[step].t)) $('lcdBody').scrollBy({ top: dd*120, behavior: REDUCED ? 'auto' : 'smooth' }); else wheelStep(dd); });
   new ResizeObserver(drawWheel).observe(w); drawWheel(); })();
 
 /* ======================= INTERAZIONI ======================= */
