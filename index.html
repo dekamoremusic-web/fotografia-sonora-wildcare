@@ -117,20 +117,22 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .meter i{width:6px;height:10px;background:var(--ghost);border-radius:1px}
 .meter i.on{background:var(--ink)}
 
-/* mixer */
-.strips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.strip{display:flex;flex-direction:column;align-items:center;gap:8px;border:1.5px solid var(--ink);border-radius:14px;padding:10px 6px}
-.strip.focus{box-shadow:inset 0 0 0 2px var(--ink)}
-.strip .nm{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;display:flex;gap:5px;align-items:center;padding:4px;min-height:28px}
-.lcd-body>*{flex-shrink:0}
-.strips{flex:1 0 auto;min-height:200px} .strip{justify-content:space-between} .fader{flex:1;justify-content:space-between}
-.fader{display:flex;flex-direction:column-reverse;gap:3px;width:44px;padding:4px 6px;touch-action:none;cursor:ns-resize;border-radius:6px}
-.fader i{height:7px;background:var(--ghost);border-radius:1px}
-.fader i.on{background:var(--ink)}
-.strip .db{font-family:var(--mono);font-size:10.5px;font-variant-numeric:tabular-nums}
-.strip .lcdbtn{min-height:36px;width:100%;padding:0 4px;font-size:10px}
-.temp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-
+/* mixer: gruppi di cursori */
+.mgrp{display:flex;flex-direction:column;gap:2px;border-top:1px dashed rgba(21,23,28,.25);padding-top:8px}
+.mgrp.dis{opacity:.4}
+.mhead{display:flex;align-items:baseline;gap:6px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.mhead svg{align-self:center}
+.mhead small{margin-left:auto;font-weight:400;letter-spacing:.02em;text-transform:none;font-family:var(--sans);font-size:12px;color:var(--ink2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:58%}
+.fsl{display:grid;grid-template-columns:62px 22px minmax(0,1fr) 22px;align-items:center;gap:6px;touch-action:none;border-radius:8px;padding:2px 0}
+.fsl.dis{pointer-events:none}
+.fsl .lab{display:flex;flex-direction:column;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;line-height:1.2}
+.fsl .lab b{font-weight:500;font-size:10px;color:var(--ink2);text-transform:none;letter-spacing:0;font-variant-numeric:tabular-nums}
+.fsl svg{width:22px;height:22px;transition:opacity .15s}
+.fsl .trk{position:relative;height:38px;display:flex;align-items:center;justify-content:space-between;cursor:ew-resize}
+.fsl .trk i{width:3px;height:12px;border-radius:1px;background:var(--ghost)}
+.fsl .trk i.on{background:var(--ink)} .fsl .trk i.mid{height:20px;background:rgba(21,23,28,.35)} .fsl .trk i.mid.on{background:var(--ink)}
+.fsl .knob{position:absolute;top:50%;width:12px;height:26px;margin:-13px 0 0 -6px;border-radius:3px;background:var(--ink);box-shadow:0 0 0 3px var(--lcd)}
+.fsl:focus-visible{outline:3px solid var(--giallo);outline-offset:2px}
 /* ---------- pannello comandi ---------- */
 .deck{flex:none;display:grid;grid-template-areas:"rec play wheel" "back next wheel";grid-template-columns:minmax(0,1fr) minmax(0,1fr) 78px;column-gap:14px;row-gap:4px;align-items:start;padding:2px 2px 0}
 .c-rec{grid-area:rec} .c-play{grid-area:play} .c-back{grid-area:back} .c-next{grid-area:next}
@@ -251,15 +253,17 @@ const SEC = {
 };
 const KEYS = ['tonica', 'segnale', 'impronta'];
 const S = {
-  tonica:   { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: -10, wet: 0.6, mix: 0.7, mute: false, send: false, keep: true, proc: {}, pitch: {}, ver: 0 },
-  segnale:  { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: -6, wet: 0.15, mix: 0.65, mute: false, send: false, keep: true, proc: {}, pitch: {}, ver: 0 },
-  impronta: { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: 0, wet: 0.05, mix: 0.6, mute: false, send: false, keep: true, proc: {}, pitch: {}, ver: 0 }
+  tonica:   { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: -10, wet: 0.6, mix: 0.7, mute: false, send: 0, keep: true, proc: {}, pitch: {}, ver: 0 },
+  segnale:  { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: -6, wet: 0.15, mix: 0.65, mute: false, send: 0, keep: true, proc: {}, pitch: {}, ver: 0 },
+  impronta: { raw: null, name: '', shape: null, task: null, eff: null, pad: null, level: 0, wet: 0.05, mix: 0.6, mute: false, send: 0, keep: true, proc: {}, pitch: {}, ver: 0 }
 };
 /* master: temperatura finale e volume generale, regolati nel mixer */
 const M = { temp: 0, vol: 0 };
 /* temperatura continua da −1 (fredda: meno corpo, più aria) a +1 (calda: più corpo, meno aria) */
 function tempParams(t){ t = Math.max(-1, Math.min(1, t || 0)); return t >= 0 ? { ls: 3*t, hs: -4*t, hf: 5000 - 500*t } : { ls: 3*t, hs: -3*t, hf: 5000 }; }
-const SEND = 0.35;
+/* eco: quantità di mandata al delay condiviso, da 0 a 1; volume: tutto a sinistra è muto */
+const SEND = 0.5, LV_MIN = -36, LV_MAX = 6;
+function trackGain(st){ return st.level <= LV_MIN ? 0 : Math.pow(10, st.level/20); }
 const BREATH = { tonica: 14, segnale: 11, impronta: 17 };
 
 /* ======================= SUPERFICIE SONORA ======================= */
@@ -510,12 +514,12 @@ function buildSlot(c, key, out, t0, live, sendBus, ignoreMute, liveEdit){
   let n = baseChain(c, key, sum, st);
   /* respiro automatico: livello che oscilla tra 0,5 e 1, con periodi diversi per traccia così i tre respiri non coincidono */
   { const tg = gn(c, 0.75); lfo(c, 1/BREATH[key], 0.25, tg.gain, t0, stops); n = chainNodes(n, tg); }
-  const muted = st.mute && !ignoreMute, track = gn(c, muted ? 0 : dB(st.level)); let dry, wet;
+  const track = gn(c, trackGain(st)); let dry, wet;
   if (key === 'tonica'){ dry = gn(c, 1 - st.wet); wet = gn(c, st.wet); n.connect(dry).connect(track); chainNodes(n, biq(c, 'lowpass', 2770, 0), conv(c, IR.tonica), wet, track); }
   else { dry = gn(c, 1); wet = gn(c, st.wet); n.connect(dry).connect(track); chainNodes(n, wet, conv(c, key === 'segnale' ? IR.plate : IR.room), track); }
   let fin = track; if (key === 'segnale'){ const p = c.createStereoPanner(); p.pan.value = 0.3; track.connect(p); fin = p; }
   fin.connect(out);
-  const send = gn(c, st.send ? SEND : 0); fin.connect(send).connect(sendBus);
+  const send = gn(c, st.send*SEND); fin.connect(send).connect(sendBus);
   if (live) live[key] = { track, dry, wet, origG, transGs, send, ignoreMute: !!ignoreMute };
   return stops;
 }
@@ -599,7 +603,7 @@ const SFX = (() => {
     boot(){ [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0.07, { when: 0.06*i, vol: 0.4 })); },
     done(){ [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.09, { when: 0.07*i, vol: 0.5 })); }
   };
-  return { play(n, a){ try { if (on && P[n]) P[n](a); } catch (e) {} },
+  return { play(n, a){ try { if (on && P[n] && !(typeof STEPS !== 'undefined' && STEPS[step] && STEPS[step].t === 'mixer')) P[n](a); } catch (e) {} },
     set(v){ on = v; try { localStorage.setItem('fs-suoni', v ? '1' : '0'); } catch (e) {} if (v) P.select(); },
     get on(){ return on; } };
 })();
@@ -790,10 +794,8 @@ function render(){
     foot = 'Muovi il dito · Ruota per l’intensità';
   }
   else if (s.t === 'mixer'){
-    h = '<h2 id="scr-title">Mixer</h2><p class="txt">Premi Play e trascina le barre per regolare le tracce mentre suonano.</p><div class="strips">' + KEYS.map(stripHtml).join('') + '</div>'
-      + '<div class="mono">Temperatura</div>' + tempHtml()
-      + '<div class="mrow"><span class="mono">Master</span>' + hfaderHtml() + '<span class="mono" id="masterDb">' + fmtDb(M.vol) + '</span></div>';
-    foot = 'Trascina per regolare · Play per ascoltare';
+    h = '<h2 id="scr-title">Mixer</h2><p class="txt">Premi Play e trascina i cursori mentre ascolti. Tutto a sinistra, la traccia tace.</p>' + mixerHtml();
+    foot = 'Trascina i cursori · Play per ascoltare';
   }
   else if (s.t === 'lascia'){
     h = '<h2 id="scr-title">Scegli cosa lasciare a questo luogo</h2><p class="txt">Le parti che lasci formano l’impressione sonora del posto.</p><div class="legend">'
@@ -809,7 +811,7 @@ function render(){
   if ($('city')) drawCityFor(k);
   if ($('pad')) initPad(k); else padState = null;
   if ($('dm')) dmShow(st.shape ? shapeKind(k, st.shape) : null, false);
-  if ($('tempsl')) updateTemp();
+  if (s.t === 'mixer') mixIds().forEach(updateSl);
   if ($('plot')) plotStart(); else plotStop();
   wheelAria();
 }
@@ -950,52 +952,44 @@ function drawPad(ts){
   if (active || P.down) P.raf = requestAnimationFrame(drawPad);
 }
 
-/* ======================= MIXER ======================= */
-const FADER_N = 14, LV_MIN = -36, LV_MAX = 6;
-function stripHtml(k){ const st = S[k], sec = SEC[k], sh = shapeOf(k), dis = st.raw ? '' : ' disabled', on = Math.round((st.level - LV_MIN)/(LV_MAX - LV_MIN)*FADER_N);
-  let f = ''; for (let i = 0; i < FADER_N; i++) f += '<i class="' + (i < on && !st.mute ? 'on' : '') + '"></i>';
-  return '<div class="strip" data-k="' + k + '"><span class="nm">' + (sh ? svgShape(sh.poly, sh.color, 14) : '') + sec.name.split(' ')[0] + '</span>'
-    + '<div class="fader" data-k="' + k + '" tabindex="' + (st.raw ? 0 : -1) + '" role="slider" aria-label="Volume ' + sec.name + '" aria-valuemin="' + LV_MIN + '" aria-valuemax="' + LV_MAX + '" aria-valuenow="' + st.level + '" aria-valuetext="' + (st.mute ? 'muto' : fmtDb(st.level)) + '">' + f + '</div>'
-    + '<span class="db">' + (st.mute ? 'MUTO' : fmtDb(st.level)) + '</span>'
-    + '<button class="lcdbtn" type="button" data-act="mute" data-k="' + k + '" aria-pressed="' + st.mute + '"' + dis + '>Muto</button>'
-    + '<button class="lcdbtn" type="button" data-act="send" data-k="' + k + '" aria-pressed="' + st.send + '"' + dis + '>Eco</button></div>'; }
-function refreshStrip(k){ const old = document.querySelector('.strip[data-k="' + k + '"]'); if (!old) return; const had = document.activeElement && old.contains(document.activeElement) && document.activeElement.className;
-  old.outerHTML = stripHtml(k); if (had === 'fader') document.querySelector('.fader[data-k="' + k + '"]').focus(); }
-function setLevel(k, v){ const st = S[k], nv = Math.max(LV_MIN, Math.min(LV_MAX, Math.round(v))); if (nv === st.level) return; st.level = nv; SFX.play('tick', (nv - LV_MIN)/(LV_MAX - LV_MIN)); liveTrack(k); refreshStrip(k); }
-function liveTrack(k){ const L = playing && playing.live[k]; if (!L) return; const st = S[k]; L.track.gain.value = (st.mute && !L.ignoreMute) ? 0 : dB(st.level); L.send.gain.value = st.send ? SEND : 0; }
+/* ======================= MIXER: SOLO CURSORI ======================= */
+/* Tutti i comandi del mix sono cursori orizzontali dello stesso tipo della temperatura:
+   21 tacche, una manopola che si trascina, i segmenti accesi tra l'origine e la manopola. */
 function liveMaster(){ const L = playing && playing.live.master; if (!L || !ctx) return; const T = tempParams(M.temp);
   setG(L.ls.gain, T.ls, ctx); setG(L.hs.gain, T.hs, ctx); setG(L.hs.frequency, T.hf, ctx); setG(L.mg.gain, dB(M.vol), ctx); }
-/* volume master: barra orizzontale a segmenti */
-const MV_MIN = -24, MV_MAX = 6, MV_N = 20;
-function hfaderHtml(){ const on = Math.round((M.vol - MV_MIN)/(MV_MAX - MV_MIN)*MV_N); let f = ''; for (let i = 0; i < MV_N; i++) f += '<i class="' + (i < on ? 'on' : '') + '"></i>';
-  return '<div class="hfader" id="mfader" tabindex="0" role="slider" aria-label="Volume generale" aria-valuemin="' + MV_MIN + '" aria-valuemax="' + MV_MAX + '" aria-valuenow="' + M.vol + '" aria-valuetext="' + fmtDb(M.vol) + '">' + f + '</div>'; }
-function setMaster(v){ const nv = Math.max(MV_MIN, Math.min(MV_MAX, Math.round(v))); if (nv === M.vol) return; M.vol = nv; SFX.play('tick', (nv - MV_MIN)/(MV_MAX - MV_MIN)); liveMaster();
-  const f = $('mfader'); if (f){ const on = Math.round((M.vol - MV_MIN)/(MV_MAX - MV_MIN)*MV_N); Array.from(f.children).forEach((el, i) => el.classList.toggle('on', i < on)); f.setAttribute('aria-valuenow', String(M.vol)); f.setAttribute('aria-valuetext', fmtDb(M.vol)); }
-  const db = $('masterDb'); if (db) db.textContent = fmtDb(M.vol); }
-/* temperatura: cursore centrale tra il fiocco di neve e il sole */
 const ICO_SNOW = '<svg viewBox="0 0 24 24" aria-hidden="true" id="icoSnow"><g stroke="#15171C" stroke-width="2.2" stroke-linecap="square" fill="none"><path d="M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10"/><path d="M9 3.6l3 2.4 3-2.4M9 20.4l3-2.4 3 2.4M3.8 10.4l3.6-.8-1-3.5M20.2 13.6l-3.6.8 1 3.5M3.8 13.6l3.6.8-1 3.5M20.2 10.4l-3.6-.8 1-3.5"/></g></svg>';
 const ICO_SUN = '<svg viewBox="0 0 24 24" aria-hidden="true" id="icoSun"><g stroke="#15171C" stroke-width="2.2" stroke-linecap="square" fill="none"><circle cx="12" cy="12" r="4.3"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></g></svg>';
-const TP_N = 21;
+const ICO_SPK_LO = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#15171C" stroke-width="2.2" stroke-linecap="square" fill="none"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M16 10v4"/></g></svg>';
+const ICO_SPK_HI = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#15171C" stroke-width="2.2" stroke-linecap="square" fill="none"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M16 10v4M19 7.5v9M22 5v14"/></g></svg>';
+const ICO_DRY = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#15171C"><rect x="10" y="5" width="4" height="14"/></g></svg>';
+const ICO_ECO = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#15171C"><rect x="2" y="5" width="4" height="14"/><rect x="9" y="7" width="3.4" height="10" opacity=".7"/><rect x="15" y="9" width="2.8" height="6" opacity=".45"/><rect x="20.5" y="10.5" width="2" height="3" opacity=".25"/></g></svg>';
 function tempText(){ const t = M.temp; return Math.abs(t) < 0.05 ? 'neutra' : (t < 0 ? 'fredda ' : 'calda ') + Math.round(Math.abs(t)*100) + '%'; }
-function tempHtml(){ let t = ''; for (let i = 0; i < TP_N; i++) t += '<i' + (i === 10 ? ' class="mid"' : '') + '></i>';
-  return '<div class="tempsl" id="tempsl" tabindex="0" role="slider" aria-label="Temperatura, da fredda a calda" aria-valuemin="-100" aria-valuemax="100">' + ICO_SNOW + '<div class="trk" id="tempTrk">' + t + '<b class="knob" id="tempKnob"></b></div>' + ICO_SUN + '</div>'; }
-function updateTemp(){ const el = $('tempsl'); if (!el) return; const pos = Math.round((M.temp + 1)/2*(TP_N - 1)), lo = Math.min(pos, 10), hi = Math.max(pos, 10);
-  Array.from($('tempTrk').querySelectorAll('i')).forEach((x, i) => x.classList.toggle('on', i !== 10 && i >= lo && i <= hi));
-  $('tempKnob').style.left = ((M.temp + 1)/2*100) + '%'; $('icoSnow').style.opacity = M.temp < -0.05 ? 1 : 0.35; $('icoSun').style.opacity = M.temp > 0.05 ? 1 : 0.35;
-  el.setAttribute('aria-valuenow', String(Math.round(M.temp*100))); el.setAttribute('aria-valuetext', tempText()); }
-function setTemp(t){ let v = Math.round(Math.max(-1, Math.min(1, t))*10)/10; if (Math.abs(v) < 0.1) v = 0; if (v === M.temp) return; M.temp = v; SFX.play('tick', (v + 1)/2); liveMaster(); updateTemp(); }
-/* trascinamento per barre del mixer, master e temperatura */
-$('lcdBody').addEventListener('pointerdown', (ev) => {
-  const f = ev.target.closest('.fader'), m = ev.target.closest('#mfader'), tp = ev.target.closest('#tempsl'); if (!f && !m && !tp) return;
-  if (f && !S[f.dataset.k].raw) return; ev.preventDefault();
-  const set = (e) => { if (f){ const r = f.getBoundingClientRect(); setLevel(f.dataset.k, LV_MIN + (1 - (e.clientY - r.top)/r.height)*(LV_MAX - LV_MIN)); }
-    else if (m){ const r = m.getBoundingClientRect(); setMaster(MV_MIN + (e.clientX - r.left)/r.width*(MV_MAX - MV_MIN)); }
-    else { const r = $('tempTrk').getBoundingClientRect(); setTemp((e.clientX - r.left)/r.width*2 - 1); } };
+const FS_N = 21;
+function SL(id){ const [kind, k] = id.split('-');
+  if (kind === 'temp') return { label: 'Temperatura', short: 'Temp.', min: -1, max: 1, step: 0.1, origin: 0, li: ICO_SNOW, ri: ICO_SUN, get: () => M.temp, set: (v) => { M.temp = Math.abs(v) < 0.05 ? 0 : v; liveMaster(); }, text: tempText };
+  if (kind === 'master') return { label: 'Volume generale', short: 'Master', min: -24, max: 6, step: 1, origin: -24, li: ICO_SPK_LO, ri: ICO_SPK_HI, get: () => M.vol, set: (v) => { M.vol = v; liveMaster(); }, text: () => fmtDb(M.vol) };
+  if (kind === 'level') return { label: 'Volume ' + SEC[k].name, short: 'Volume', min: LV_MIN, max: LV_MAX, step: 1, origin: LV_MIN, li: ICO_SPK_LO, ri: ICO_SPK_HI, get: () => S[k].level, set: (v) => { S[k].level = v; liveTrack(k); }, text: () => S[k].level <= LV_MIN ? 'muto' : fmtDb(S[k].level), dis: !S[k].raw };
+  return { label: 'Eco ' + SEC[k].name, short: 'Eco', min: 0, max: 1, step: 0.05, origin: 0, li: ICO_DRY, ri: ICO_ECO, get: () => S[k].send, set: (v) => { S[k].send = v; liveTrack(k); }, text: () => S[k].send <= 0 ? 'spenta' : Math.round(S[k].send*100) + '%', dis: !S[k].raw }; }
+function fslHtml(id){ const c = SL(id); let t = ''; for (let i = 0; i < FS_N; i++) t += '<i></i>';
+  return '<div class="fsl' + (c.dis ? ' dis' : '') + '" id="sl-' + id + '" data-sl="' + id + '" tabindex="' + (c.dis ? -1 : 0) + '" role="slider" aria-label="' + c.label + '" aria-valuemin="' + c.min + '" aria-valuemax="' + c.max + '"' + (c.dis ? ' aria-disabled="true"' : '') + '>'
+    + '<span class="lab">' + c.short + '<b id="v-' + id + '"></b></span>' + c.li + '<div class="trk">' + t + '<b class="knob"></b></div>' + c.ri + '</div>'; }
+function updateSl(id){ const el = $('sl-' + id); if (!el) return; const c = SL(id), v = c.get(), f = (v - c.min)/(c.max - c.min), fo = (c.origin - c.min)/(c.max - c.min);
+  const pos = Math.round(f*(FS_N - 1)), org = Math.round(fo*(FS_N - 1)), lo = Math.min(pos, org), hi = Math.max(pos, org);
+  Array.from(el.querySelectorAll('.trk i')).forEach((x, i) => { x.classList.toggle('on', i >= lo && i <= hi && !(i === org && pos === org)); x.classList.toggle('mid', i === org && org > 0 && org < FS_N - 1); });
+  el.querySelector('.knob').style.left = (f*100) + '%';
+  const svgs = el.querySelectorAll('svg'); if (svgs.length === 2){ svgs[0].style.opacity = f < fo - 0.02 || (fo === 0 && f < 0.02) ? 1 : 0.35; svgs[1].style.opacity = f > fo + 0.02 ? 1 : 0.35; }
+  el.setAttribute('aria-valuenow', String(Math.round(v*100)/100)); el.setAttribute('aria-valuetext', c.text()); $('v-' + id).textContent = c.text(); }
+function setSl(id, v){ const c = SL(id); if (c.dis) return; v = Math.round(Math.max(c.min, Math.min(c.max, v))/c.step)*c.step; v = Math.round(v*100)/100; if (v === c.get()) return; c.set(v); updateSl(id); }
+const mixIds = () => KEYS.flatMap((k) => ['level-' + k, 'send-' + k]).concat(['temp', 'master']);
+function mixerHtml(){ return KEYS.map((k) => { const sh = shapeOf(k); return '<div class="mgrp' + (S[k].raw ? '' : ' dis') + '"><div class="mhead">' + (sh ? svgShape(sh.poly, sh.color, 14) : '') + SEC[k].name + '<small>' + (S[k].raw ? effLabel(k) : 'nessun suono') + '</small></div>' + fslHtml('level-' + k) + fslHtml('send-' + k) + '</div>'; }).join('')
+  + '<div class="mgrp"><div class="mhead">Tutta la composizione</div>' + fslHtml('temp') + fslHtml('master') + '</div>'; }
+function liveTrack(k){ const L = playing && playing.live[k]; if (!L || !ctx) return; const st = S[k]; setG(L.track.gain, trackGain(st), ctx); setG(L.send.gain, st.send*SEND, ctx); }
+$('lcdBody').addEventListener('pointerdown', (ev) => { const el = ev.target.closest('.fsl'); if (!el || el.classList.contains('dis')) return; ev.preventDefault(); const id = el.dataset.sl, trk = el.querySelector('.trk');
+  const set = (e) => { const r = trk.getBoundingClientRect(), c = SL(id); setSl(id, c.min + Math.max(0, Math.min(1, (e.clientX - r.left)/r.width))*(c.max - c.min)); };
   set(ev); const mv = (e) => set(e), up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); };
   window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); });
-$('lcdBody').addEventListener('keydown', (ev) => { const dd = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[ev.key]; if (!dd) return;
-  if (ev.target.id === 'mfader'){ ev.preventDefault(); setMaster(M.vol + dd); } else if (ev.target.id === 'tempsl'){ ev.preventDefault(); setTemp(M.temp + dd*0.1); } });
-$('lcdBody').addEventListener('keydown', (ev) => { const f = ev.target.closest('.fader'); if (!f) return; const dd = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[ev.key]; if (!dd) return; ev.preventDefault(); setLevel(f.dataset.k, S[f.dataset.k].level + dd); });
+$('lcdBody').addEventListener('keydown', (ev) => { const el = ev.target.closest('.fsl'); if (!el) return; const dd = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[ev.key]; if (!dd) return; ev.preventDefault();
+  const id = el.dataset.sl, c = SL(id); setSl(id, c.get() + dd*c.step); });
 
 /* ======================= ROTELLA ======================= */
 let wheelPhase = 0;
@@ -1046,7 +1040,6 @@ $('lcdBody').addEventListener('click', (ev) => {
   else if (act === 'example'){ setSample(s.k, synth(s.k), EXNAME[s.k]); render(); restart(); }
   else if (act === 'quick') quickFill();
   else if (act === 'file') openPicker();
-  else if (act === 'mute' || act === 'send'){ const k = b.dataset.k; S[k][act] = !S[k][act]; SFX.play(S[k][act] ? 'select' : 'blip'); liveTrack(k); refreshStrip(k); }
   else if (act === 'sfx'){ SFX.set(!SFX.on); b.textContent = 'Suoni dei tasti: ' + (SFX.on ? 'sì' : 'no'); b.setAttribute('aria-pressed', String(SFX.on)); }
   else if (act === 'keep'){ const k = b.dataset.k; S[k].keep = !S[k].keep; SFX.play(S[k].keep ? 'select' : 'blip'); b.setAttribute('aria-pressed', String(S[k].keep)); if (playing && playing.tag === 'keep') play(KEYS.filter((x) => S[x].keep), 'keep'); $('saveArea').innerHTML = saveHtml(); updateKeys(); }
   else if (act === 'export') exportZip();
@@ -1141,7 +1134,7 @@ async function exportZip(){
     for (const k of KEYS){ const st = S[k], sh = shapeOf(k);
       info[k] = { lasciata: st.keep && !!st.raw, forma: sh ? POSTURE[sh.sides].n : null, postura: sh ? POSTURE[sh.sides].t : null, suggerimento: sh && st.task != null ? sh.tasks[st.task] : null, sorgente: st.name,
         impressione: st.raw ? effLabel(k) : null, gesto: st.pad ? { x: +st.pad.x.toFixed(2), y: +st.pad.y.toFixed(2), pesi: Object.fromEntries(Object.entries(padWeights(st.pad)).map(([v, w]) => [padOpt(k, v).s, +w.toFixed(2)])) } : null,
-        intensita: st.mix, livello_dB: st.level, eco: st.send, muto_nel_mixer: st.mute }; }
+        intensita: st.mix, livello_dB: st.level, eco: st.send, muto: st.level <= LV_MIN }; }
     files.push({ name: 'scelte.json', data: new TextEncoder().encode(JSON.stringify(info, null, 2)) });
     const dt = new Date(), stamp = dt.getFullYear() + pad2(dt.getMonth() + 1) + pad2(dt.getDate()) + '-' + pad2(dt.getHours()) + pad2(dt.getMinutes());
     prepared = { blob: zip(files), fname: 'impressione-sonora-' + stamp + '.zip', sig: exportSig() };
