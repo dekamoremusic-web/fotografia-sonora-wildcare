@@ -793,6 +793,8 @@ function render(){
     foot = 'Muovi il dito · Ruota per l’intensità';
   }
   else if (s.t === 'mixer'){
+    /* la prima volta nel mixer la tonica parte più bassa, per non coprire le altre tracce; poi resta come la regola l'utente */
+    if (!M.tonicaInit){ M.tonicaInit = true; S.tonica.level = Math.min(S.tonica.level, TONICA_MIX); }
     h = '<h2 id="scr-title">Mixer</h2><p class="txt">Premi Play e trascina i cursori mentre ascolti. Tutto a sinistra, la traccia tace.</p>' + mixerHtml();
     foot = 'Trascina i cursori · Play per ascoltare';
   }
@@ -951,6 +953,7 @@ function drawPad(ts){
   if (active || P.down) P.raf = requestAnimationFrame(drawPad);
 }
 
+const TONICA_MIX = -9;
 /* ======================= MIXER: SOLO CURSORI ======================= */
 /* Tutti i comandi del mix sono cursori orizzontali dello stesso tipo della temperatura:
    21 tacche, una manopola che si trascina, i segmenti accesi tra l'origine e la manopola. */
