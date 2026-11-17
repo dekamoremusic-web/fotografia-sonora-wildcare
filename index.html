@@ -13,16 +13,22 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@500;600;700&family=Inter:wght@900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;1,500&family=Inter:wght@400;600&family=Jersey+25&display=swap">
+<link rel="preload" href="fonts/iosevka-italic-400.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+/* Iosevka (OFL-1.1), ridotto ai caratteri latini usati dall'app */
+@font-face{font-family:"Iosevka";src:url("fonts/iosevka-italic-400.woff2") format("woff2");font-style:italic;font-weight:400;font-display:swap}
+@font-face{font-family:"Iosevka";src:url("fonts/iosevka-italic-400.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap}
 /* Dispositivo ibrido: scocca e tasti alla Teenage Engineering, schermo LCD alla Game & Watch.
    Colori e misure dal frame Figma «1.4 Tonica · Rack (prototipo)» e dalle variabili rack/* */
 :root{
-  --scocca:#E0532C; --tasto:#DDDCCA; --base:#15171C; --avanti:#3C3E23; --lcd:#D7D2C6; --rec:#E0532C; --giallo:#FBF231;
-  --ink:#15171C; --ink2:#47453F; --ghost:rgba(21,23,28,.075); --fondo:#2B2118;
-  --ton:#6B3FD9; --seg:#C2620F; --imp:#127A70;
-  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --scocca:#E0532C; --tasto:#FFFFFF; --base:#000000; --avanti:#3C3E23; --lcd:#FFFFFF; --rec:#E0532C; --giallo:#BE08E2; --viola:#BE08E2; --verde:#06E307; --verde-t:#0FAE0B;
+  --ink:#000000; --ink2:#4A4A4A; --ghost:rgba(0,0,0,.07); --fondo:#3C3E23;
+  --ton:#BE08E2; --seg:#0FAE0B; --imp:#E0532C;
+  --sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'Iosevka',ui-monospace,Menlo,monospace;
+  --cond:'Barlow Condensed','Arial Narrow',sans-serif;
+  --pixel:'Jersey 25','Courier New',monospace;
   --key-h:64px; --press:4px;
 }
 *{box-sizing:border-box}
@@ -46,7 +52,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 /* avanzamento: barre come i LED di un sequencer */
 .prog{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;flex:none}
 .prog div{display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink);text-transform:uppercase}
-.prog i{display:block;height:4px;border-radius:2px;background:rgba(21,23,28,.28);overflow:hidden}
+.prog i{display:block;height:4px;border-radius:2px;background:rgba(0,0,0,.28);overflow:hidden}
 .prog i b{display:block;height:100%;width:var(--p,0%);background:var(--giallo);transition:width .3s}
 .prog .now{font-weight:600}
 
@@ -54,14 +60,14 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .bezel{flex:1 1 auto;min-height:0;background:var(--base);border-radius:30px;padding:7px;display:flex;flex-direction:column;
   box-shadow:0 1px 0 rgba(255,255,255,.25),inset 0 2px 3px rgba(0,0,0,.6)}
 .lcd{position:relative;flex:1;min-height:0;background:var(--lcd);border-radius:24px;display:flex;flex-direction:column;overflow:hidden;
-  box-shadow:inset 0 3px 6px rgba(0,0,0,.18),inset 0 0 0 1px rgba(21,23,28,.10);
-  background-image:repeating-linear-gradient(0deg,rgba(21,23,28,.025) 0 1px,transparent 1px 3px),radial-gradient(140% 90% at 20% 0%,rgba(255,255,255,.35),transparent 55%)}
+  box-shadow:inset 0 3px 6px rgba(0,0,0,.18),inset 0 0 0 1px rgba(0,0,0,.10);
+  background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.025) 0 1px,transparent 1px 3px),radial-gradient(140% 90% at 20% 0%,rgba(255,255,255,.35),transparent 55%)}
 .lcd-head{display:flex;align-items:center;gap:8px;padding:14px 18px 8px;font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.06em;text-transform:uppercase;flex:none}
 .lcd-head .sq{width:10px;height:10px;border-radius:2px;background:var(--acc,var(--scocca));flex:none}
 .lcd-head .cnt{margin-left:auto;display:flex;align-items:center;gap:6px}
 .lcd-head .pos{display:inline-flex;align-items:center;margin-left:2px}
-.lcd-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 18px 12px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:rgba(21,23,28,.35) transparent}
-.lcd-foot{flex:none;padding:8px 18px 13px;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;text-align:center;min-height:32px;color:var(--ink);border-top:1px dashed rgba(21,23,28,.18)}
+.lcd-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 18px 12px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.35) transparent}
+.lcd-foot{flex:none;padding:8px 18px 13px;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;text-align:center;min-height:32px;color:var(--ink);border-top:1px dashed rgba(0,0,0,.18)}
 .lcd-foot.warn{animation:blink .9s steps(2,end) 3}
 @keyframes blink{50%{opacity:.15}}
 .lcd h1{margin:4px 0 0;font-size:30px;line-height:1.02;letter-spacing:-.01em;font-weight:700;text-wrap:balance}
@@ -90,7 +96,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .legend{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none;font-size:14.5px;line-height:1.35}
 .legend li{display:flex;gap:10px;align-items:flex-start}
 .legend b.c{flex:none;width:11px;height:11px;border-radius:2px;margin-top:4px}
-.posture{display:flex;gap:10px;align-items:center;border:1.5px dashed rgba(21,23,28,.4);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.35}
+.posture{display:flex;gap:10px;align-items:center;border:1.5px dashed rgba(0,0,0,.4);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.35}
 
 /* forma d'onda città e superficie */
 .city{width:100%;aspect-ratio:2/1.15;display:block}
@@ -119,7 +125,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .meter i.on{background:var(--ink)}
 
 /* mixer: gruppi di cursori */
-.mgrp{display:flex;flex-direction:column;gap:2px;border-top:1px dashed rgba(21,23,28,.25);padding-top:8px}
+.mgrp{display:flex;flex-direction:column;gap:2px;border-top:1px dashed rgba(0,0,0,.25);padding-top:8px}
 .mgrp.dis{opacity:.4}
 .mhead{display:flex;align-items:baseline;gap:6px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .mhead svg{align-self:center}
@@ -131,7 +137,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .fsl svg{width:22px;height:22px;transition:opacity .15s}
 .fsl .trk{position:relative;height:38px;display:flex;align-items:center;justify-content:space-between;cursor:ew-resize}
 .fsl .trk i{width:3px;height:12px;border-radius:1px;background:var(--ghost)}
-.fsl .trk i.on{background:var(--ink)} .fsl .trk i.mid{height:20px;background:rgba(21,23,28,.35)} .fsl .trk i.mid.on{background:var(--ink)}
+.fsl .trk i.on{background:var(--ink)} .fsl .trk i.mid{height:20px;background:rgba(0,0,0,.35)} .fsl .trk i.mid.on{background:var(--ink)}
 .fsl .knob{position:absolute;top:50%;width:12px;height:26px;margin:-13px 0 0 -6px;border-radius:3px;background:var(--ink);box-shadow:0 0 0 3px var(--lcd)}
 .fsl:focus-visible{outline:3px solid var(--giallo);outline-offset:2px}
 /* ---------- pannello comandi ---------- */
@@ -181,14 +187,46 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .tempsl svg{width:30px;height:30px;transition:opacity .15s}
 .tempsl .trk{position:relative;height:40px;display:flex;align-items:center;justify-content:space-between;cursor:ew-resize}
 .tempsl .trk i{width:4px;height:14px;border-radius:1px;background:var(--ghost)}
-.tempsl .trk i.on{background:var(--ink)} .tempsl .trk i.mid{height:22px;background:rgba(21,23,28,.35)}
+.tempsl .trk i.on{background:var(--ink)} .tempsl .trk i.mid{height:22px;background:rgba(0,0,0,.35)}
 .tempsl .knob{position:absolute;top:50%;width:14px;height:30px;margin:-15px 0 0 -7px;border-radius:3px;background:var(--ink);box-shadow:0 0 0 3px var(--lcd)}
 .hfader{display:flex;gap:3px;height:28px;align-items:center;touch-action:none;cursor:ew-resize;flex:1}
 .hfader i{flex:1;height:14px;border-radius:1px;background:var(--ghost)} .hfader i.on{background:var(--ink)}
 .mrow{display:flex;align-items:center;gap:10px}
 .mrow .mono{flex:none;min-width:58px}
 input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-@media (max-height:700px){ :root{--key-h:54px;--press:3px} .padwrap{max-width:min(100%,33vh,33dvh)} .lcd h1{font-size:26px} .lcd .quote{font-size:16px} }
+
+/* ================= OFFicina RAMA =================
+   Palette e caratteri dal design system OFFicina RAMA, con l'arancione della scocca come colore dominante.
+   Titoli in Jersey 25 (pixel), domande e citazioni in Iosevka corsivo, testate e testi in Inter,
+   serigrafie e tasto Avanti in Barlow Condensed. Angoli vivi dentro lo schermo; viola per focus e avanzamento. */
+.lcd h1,.lcd h2{font-family:var(--pixel);font-weight:400;letter-spacing:.01em;line-height:1}
+.lcd h1{font-size:44px} .lcd h2{font-size:30px}
+.lcd[data-step=effetto] h2,.lcd h2.q{font-family:var(--mono);font-style:italic;font-weight:400;font-size:18px;line-height:1.3;letter-spacing:0}
+.lcd .quote{font-family:var(--mono);font-style:italic;font-weight:400;font-size:19px;line-height:1.38;border-left:2px solid var(--scocca);padding-left:14px;color:var(--ink)}
+.lcd .txt{font-family:var(--sans)}
+.lcd-head{font-family:var(--sans);font-weight:400;font-size:13px;letter-spacing:0;text-transform:none}
+.lcd-head .ico{display:inline-flex;color:var(--acc,var(--ink))}
+.lcd-foot{font-family:var(--sans);font-size:11.5px;letter-spacing:0;text-transform:none;border-top:1px solid var(--ink)}
+.lcd .mono,.mhead,.fsl .lab,.edge,.readout .pct,.lcdbtn{font-family:var(--mono);font-style:italic;letter-spacing:.02em;text-transform:none}
+.lcd .mono{font-size:13px} .lcdbtn{font-size:13px;font-weight:400} .mhead{font-size:13px;font-weight:400} .fsl .lab{font-size:12px} .edge{font-size:12px;font-weight:400;letter-spacing:.02em} .readout .pct{font-size:12px}
+.prog div{font-family:var(--sans);font-size:11px;letter-spacing:0;text-transform:none}
+.prog i{border-radius:0;background:rgba(0,0,0,.25)} .prog i b{background:var(--viola)}
+.silk{font-family:var(--cond);font-weight:600;font-size:11px;letter-spacing:.08em}
+.key.go{font-family:var(--cond);font-weight:600;font-size:24px;letter-spacing:.02em;text-transform:uppercase;text-shadow:none}
+.lcd,.bezel{border-radius:6px} .bezel{padding:6px}
+.sel,.lcdbtn,.posture,.fsl,.pad,.mgrp,.legend b.c,.readout .now i,.edge i,.meter i,.fsl .trk i,.fsl .knob,.prog i{border-radius:0}
+.sel[aria-pressed="true"]{background:var(--ink);color:#fff}
+.sel[aria-pressed="true"] .led{background:var(--viola);box-shadow:none}
+.lcdbtn[aria-pressed="true"],.lcdbtn.on{background:var(--ink);color:#fff}
+.fsl .knob{box-shadow:0 0 0 3px var(--lcd)}
+.key.rect,.well.rect{border-radius:2px}
+.leds i.on{background:var(--verde);box-shadow:0 0 6px 1px rgba(6,227,7,.7),0 1px 0 rgba(255,230,215,.35)}
+.leds i.on.hi{background:var(--viola);box-shadow:0 0 6px 1px rgba(190,8,226,.7)}
+.leds.hot i.on{box-shadow:0 0 10px 2px rgba(6,227,7,.85)}
+.leds.hot i.on.hi{box-shadow:0 0 10px 2px rgba(190,8,226,.85)}
+.key:focus-visible,.wheel:focus-visible,.sel:focus-visible,.lcdbtn:focus-visible,.pad:focus-visible,.fsl:focus-visible{outline:2px solid var(--viola);outline-offset:2px}
+.secico{display:inline-block;vertical-align:middle;flex:none}
+@media (max-height:700px){ :root{--key-h:54px;--press:3px} .padwrap{max-width:min(100%,33vh,33dvh)} .lcd h1{font-size:36px} .lcd .quote{font-size:16.5px} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -273,9 +311,9 @@ const BREATH = { tonica: 14, segnale: 11, impronta: 17 };
    al centro valgono 25% ciascuno, su un bordo il polo vicino arriva all'87%. */
 const PAD = { cells: 13, sigma: 0.6, poles: [
   { v: 'A', x: 1, y: 0, col: '#E0532C' },
-  { v: 'B', x: 0, y: 1, col: '#2E4057' },
-  { v: 'C', x: -1, y: 0, col: '#6B3FD9' },
-  { v: 'D', x: 0, y: -1, col: '#15171C' } ] };
+  { v: 'B', x: 0, y: 1, col: '#BE08E2' },
+  { v: 'C', x: -1, y: 0, col: '#0FAE0B' },
+  { v: 'D', x: 0, y: -1, col: '#000000' } ] };
 const DRY = { s: 'Originale', t: 'Il suono così com’è, senza trasformazioni' };
 function padWeights(p){ const w = {}; let s = 0;
   for (const q of PAD.poles){ const d2 = (p.x - q.x)*(p.x - q.x) + (p.y - q.y)*(p.y - q.y); w[q.v] = Math.exp(-d2/(2*PAD.sigma*PAD.sigma)); s += w[q.v]; }
@@ -640,14 +678,14 @@ function dmDraw(now){ const D = dmState; if (!D || !D.cv.isConnected) return; D.
   const cv = D.cv, dpr = window.devicePixelRatio || 1, r = cv.getBoundingClientRect(), W = Math.max(1, Math.round(r.width*dpr)), H = Math.max(1, Math.round(r.height*dpr));
   if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
   const g = cv.getContext('2d'), cw = W/DM.C, ch = H/DM.R, rad = Math.min(cw, ch)*0.36, t = D.anim ? now - D.t0 : 9999, MORPH = 520;
-  g.clearRect(0, 0, W, H); g.fillStyle = 'rgba(21,23,28,.08)';
+  g.clearRect(0, 0, W, H); g.fillStyle = 'rgba(0,0,0,.08)';
   for (let y = 0; y < DM.R; y++) for (let x = 0; x < DM.C; x++){ g.beginPath(); g.arc((x + 0.5)*cw, (y + 0.5)*ch, rad, 0, 2*Math.PI); g.fill(); }
   const p = Math.min(1, t/MORPH), ease = (v) => 1 - Math.pow(1 - v, 3), n = D.to.length, idle = t - MORPH;
   let bounce = 0; if (D.kind === 'stool' && idle > 0 && idle < 360) bounce = -Math.sin(idle/360*Math.PI)*0.9;
   for (let i = 0; i < n; i++){ const [tx, ty, a] = D.to[i];
     let sx, sy; if (D.from.length){ const s = D.from[Math.floor(i*D.from.length/n)]; sx = s[0]; sy = s[1]; } else { const h = Math.sin(i*12.9898)*43758.5453; sx = (h - Math.floor(h))*DM.C; sy = DM.R + 2; }
     const e = ease(Math.max(0, Math.min(1, p*1.3 - (i/n)*0.3))), x = sx + (tx - sx)*e, y = sy + (ty - sy)*e + (a === 1 || D.kind === 'stool' ? bounce*(1 - ty/DM.R) : 0);
-    let col = a === 0 ? '#15171C' : '#E0532C', alpha = 1;
+    let col = a === 0 ? '#000000' : '#E0532C', alpha = 1;
     if (a >= 2 && idle > 0 && idle < 1500){ const k = Math.floor(idle/170) % 4; alpha = (k === a - 2) ? 1 : 0.25; }
     g.globalAlpha = alpha; g.fillStyle = col; g.beginPath(); g.arc((x + 0.5)*cw, (y + 0.5)*ch, rad*1.08, 0, 2*Math.PI); g.fill(); }
   g.globalAlpha = 1;
@@ -708,15 +746,28 @@ function plotFrame(now){
   g.clearRect(0, 0, CW, CH);
   for (let y = 0; y < PLOT_R; y++) for (let x = 0; x < PLOT_C; x++){
     const sx = x*2 + 1, sy = y*2 + 1, X = x*pw + gap/2, Y = y*ph + gap/2, w = pw - gap, h = ph - gap;
-    g.fillStyle = 'rgba(21,23,28,.07)'; g.fillRect(X, Y, w, h);
+    g.fillStyle = 'rgba(0,0,0,.07)'; g.fillRect(X, Y, w, h);
     let tone = 0;
     if (flash) tone = 2;
     else if (bAt(sx, sy) > 110) tone = 2;
     else if (bAt(sx - 2, sy) > 110 || bAt(sx + 2, sy) > 110 || bAt(sx, sy - 2) > 110 || bAt(sx, sy + 2) > 110) tone = 0;
     else { const i = (sy*W + sx)*4, lum = (0.299*A[i] + 0.587*A[i + 1] + 0.114*A[i + 2])/255, dens = (1 - lum)*0.98; tone = dens*16 > BAYER[(y % 4)*4 + (x % 4)] ? 1 : 0; }
-    if (tone){ g.fillStyle = tone === 2 ? '#15171C' : 'rgba(21,23,28,.5)'; g.fillRect(X, Y, w, h); } }
+    if (tone){ g.fillStyle = tone === 2 ? '#000000' : 'rgba(0,0,0,.5)'; g.fillRect(X, Y, w, h); } }
   if (REDUCED){ cancelAnimationFrame(P.raf); P.raf = 0; }
 }
+
+
+/* ======================= ICONE DELLE SEZIONI ======================= */
+/* Disegnate solo con rettangoli su una griglia di 12, nello spirito del marchio pixel di OFFicina RAMA.
+   Tonica: strati orizzontali continui, lo sfondo. Segnale: una colonna che emerge da una base e irradia.
+   Impronta: una spirale squadrata che si chiude su un punto, il segno di un solo luogo. */
+const SEC_ICON = {
+  tonica: [[0,1,12,2],[0,4.5,7,2],[8,4.5,4,2],[0,8,3,2],[4,8,8,2],[2,11,8,1]],
+  segnale: [[0,10,12,2],[5,2,2,8],[2,4,2,2],[8,4,2,2],[0,1,2,2],[10,1,2,2]],
+  impronta: [[0,0,12,2],[0,0,2,12],[0,10,12,2],[10,4,2,8],[4,4,4,2],[4,4,2,4],[4,7,2,1],[6,6,2,2]]
+};
+function secIcon(k, size, color){ return '<svg class="secico" width="' + size + '" height="' + size + '" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true" style="color:' + (color || 'currentColor') + '">'
+  + SEC_ICON[k].map(([x, y, w, h]) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="currentColor"/>').join('') + '</svg>'; }
 
 /* ======================= PERCORSO ======================= */
 const STEPS = [{ t: 'intro' }];
@@ -760,12 +811,12 @@ function render(){
   $('prog').innerHTML = ['Tonica', 'Segnale', 'Impronta', 'Ascolto'].map((n, i) => '<div class="' + (i === secIdx ? 'now' : '') + '"><i><b style="--p:' + (i < secIdx ? 100 : i === secIdx ? Math.round(within/tot*100) : 0) + '%"></b></i>' + n + '</div>').join('');
   // intestazione dello schermo
   const label = k ? sec.n + ' · ' + sec.name : s.t === 'intro' ? 'Firenze si ascolta' : '4 · Composizione';
-  $('lcdHead').innerHTML = '<span class="sq" style="--acc:' + (k ? 'var(' + sec.acc + ')' : 'var(--scocca)') + '"></span><span>' + label + '</span>' + (k && st.shape && s.t !== 'forma' ? '<span class="pos">' + svgShape(shapeOf(k).poly, '', 15) + '<span class="sr">Postura: ' + POSTURE[shapeOf(k).sides].n + '</span></span>' : '') + '<span class="cnt"><span class="sr">Passo ' + (step + 1) + ' di ' + STEPS.length + '</span>' + seg7(pad2(step + 1) + '/' + pad2(STEPS.length), 15) + '</span>';
+  $('lcdHead').innerHTML = (k ? '<span class="ico" style="--acc:var(' + sec.acc + ')">' + secIcon(k, 14) + '</span>' : '<span class="sq" style="--acc:var(--scocca)"></span>') + '<span>' + label + '</span>' + (k && st.shape && s.t !== 'forma' ? '<span class="pos">' + svgShape(shapeOf(k).poly, '', 15) + '<span class="sr">Postura: ' + POSTURE[shapeOf(k).sides].n + '</span></span>' : '') + '<span class="cnt"><span class="sr">Passo ' + (step + 1) + ' di ' + STEPS.length + '</span>' + seg7(pad2(step + 1) + '/' + pad2(STEPS.length), 15) + '</span>';
   let h = '', foot = '';
   if (s.t === 'intro'){
     h = '<canvas class="plot" id="plot" role="img" aria-label="Animazione a pennarello: bande di colore che scorrono come il suono di un luogo, un’onda sonora disegnata a riccioli e un mirino che la cattura"></canvas><h1 id="scr-title">Impressione sonora</h1>'
       + '<p class="txt">Registrerai tre suoni di questo luogo e li trasformerai con un gesto. Alla fine li ascolterai insieme e sceglierai cosa lasciare qui.</p>'
-      + '<ul class="legend"><li><b class="c" style="background:var(--ton)"></b><span><strong>Tonica</strong>: lo sfondo continuo che di solito non ascolti.</span></li><li><b class="c" style="background:var(--seg)"></b><span><strong>Segnale</strong>: ciò che emerge e chiama l’attenzione.</span></li><li><b class="c" style="background:var(--imp)"></b><span><strong>Impronta sonora</strong>: il suono che appartiene solo a questo posto.</span></li></ul>'
+      + '<ul class="legend"><li>' + secIcon('tonica', 16, 'var(--ton)') + '<span><strong>Tonica</strong>: lo sfondo continuo che di solito non ascolti.</span></li><li>' + secIcon('segnale', 16, 'var(--seg)') + '<span><strong>Segnale</strong>: ciò che emerge e chiama l’attenzione.</span></li><li>' + secIcon('impronta', 16, 'var(--imp)') + '<span><strong>Impronta sonora</strong>: il suono che appartiene solo a questo posto.</span></li></ul>'
       + '<p class="txt">Ogni sezione comincia da una forma, che ti dice come ascoltare.</p>'
       + '<ul class="legend"><li>' + svgShape('RG', '#1f3a6b', 22) + '<span><strong>Sgabello</strong>: fermati e ascolta seduto.</span></li><li>' + svgShape('T', '#e07a1f', 22) + '<span><strong>Cono</strong>: ascolta in una direzione.</span></li></ul>'
       + '<div class="row"><button class="lcdbtn" type="button" data-act="quick">Prova veloce</button><button class="lcdbtn" type="button" data-act="sfx" aria-pressed="' + SFX.on + '">Suoni dei tasti: ' + (SFX.on ? 'sì' : 'no') + '</button></div>';
@@ -786,7 +837,7 @@ function render(){
     foot = recState ? 'Sto registrando · Rec per fermare' : st.raw ? 'Play per ascoltare · Avanti per continuare' : 'Premi Rec per registrare · Massimo 20 s';
   }
   else if (s.t === 'effetto'){
-    h = '<h2 id="scr-title">' + sec.q + '</h2>'
+    h = '<h2 id="scr-title" class="q">' + sec.q + '</h2>'
       + '<div class="padwrap' + (st.pad ? ' revealed' : '') + '" id="padwrap"><div class="pad" id="pad" tabindex="0" role="application" aria-roledescription="superficie sonora" aria-label="Superficie sonora: trascina il dito, oppure usa le frecce" aria-describedby="readout"><canvas id="padcv"></canvas></div>'
       + PAD.poles.map((q) => '<span class="edge ' + q.v + '" aria-hidden="true"><i style="background:' + q.col + '"></i>' + padOpt(k, q.v).s + '</span>').join('') + '</div>'
       + '<div class="readout" id="readout"></div>';
@@ -800,7 +851,7 @@ function render(){
   }
   else if (s.t === 'lascia'){
     h = '<h2 id="scr-title">Scegli cosa lasciare a questo luogo</h2><p class="txt">Le parti che lasci formano l’impressione sonora del posto.</p><div class="legend">'
-      + KEYS.map((kk) => { const s2 = S[kk], sh = shapeOf(kk); return '<button class="sel" type="button" data-act="keep" data-k="' + kk + '" aria-pressed="' + (s2.keep && !!s2.raw) + '"' + (s2.raw ? '' : ' disabled') + '>' + (sh ? svgShape(sh.poly, sh.color, 34) : svgShape('Q', 'transparent', 34))
+      + KEYS.map((kk) => { const s2 = S[kk], sh = shapeOf(kk); return '<button class="sel" type="button" data-act="keep" data-k="' + kk + '" aria-pressed="' + (s2.keep && !!s2.raw) + '"' + (s2.raw ? '' : ' disabled') + '>' + secIcon(kk, 28)
         + '<span class="t"><b>' + SEC[kk].n + ' · ' + SEC[kk].name + '</b><small>' + (s2.raw ? effLabel(kk) : 'Nessun suono registrato') + '</small></span><span class="led"></span></button>'; }).join('') + '</div>'
       + '<div id="saveArea">' + saveHtml() + '</div>';
     foot = 'Play per ascoltare ciò che lasci';
@@ -830,7 +881,7 @@ function updateKeys(){
   $('kPlay').setAttribute('aria-label', on ? 'Ferma l’ascolto' : 'Ascolta'); $('kPlay').setAttribute('aria-pressed', String(!!on));
   $('playIco').innerHTML = on ? '<rect x="6" y="5" width="4.5" height="14" rx="1" fill="currentColor"/><rect x="13.5" y="5" width="4.5" height="14" rx="1" fill="currentColor"/>' : '<polygon points="7,4 20,12 7,20" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>';
   setDis($('kBack'), step === 0);
-  setDis($('kNext'), !!why); $('nextLbl').textContent = step === 0 ? 'Inizia' : step === STEPS.length - 1 ? 'Ricomincia' : 'Avanti';
+  setDis($('kNext'), !!why); $('nextLbl').textContent = step === 0 ? 'Inizia' : step === STEPS.length - 1 ? 'Ricomincia' : 'Avanti'; $('kNext').style.fontSize = $('nextLbl').textContent.length > 7 ? '19px' : '';
   $('kNext').setAttribute('aria-label', $('nextLbl').textContent + (why ? ': ' + why : ''));
   setDis($('wheel'), !wheelActive()); setLeds(false);
 }
@@ -854,7 +905,7 @@ function cityPeaks(lv, live){ const out = [], mx = Math.max(0.0001, ...lv); let 
 function drawCity(cv, lv, n, live){
   const d = window.devicePixelRatio || 1, r = cv.getBoundingClientRect(), W = Math.max(1, Math.round(r.width*d)), H = Math.max(1, Math.round(r.height*d));
   if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
-  const g = cv.getContext('2d'), ink = '#15171C', ghost = 'rgba(21,23,28,.075)', base = Math.round(H*0.68), top = Math.round(H*0.04), pitch = W/n, bw = Math.max(1, pitch*0.68), maxH = (base - top)*0.6, U = pitch*1.35;
+  const g = cv.getContext('2d'), ink = '#000000', ghost = 'rgba(0,0,0,.075)', base = Math.round(H*0.68), top = Math.round(H*0.04), pitch = W/n, bw = Math.max(1, pitch*0.68), maxH = (base - top)*0.6, U = pitch*1.35;
   g.clearRect(0, 0, W, H);
   // colonne spente dell'LCD
   g.fillStyle = ghost; for (let i = 0; i < n; i++){ const x = i*pitch + (pitch - bw)/2; g.fillRect(x, top, bw, base - top - d); g.fillRect(x, base + 2*d, bw, H - base - 2*d); }
@@ -932,7 +983,7 @@ function kickPad(){ if (padState && !padState.raf) padState.raf = requestAnimati
 function drawPad(ts){
   const P = padState; if (!P) return; P.raf = 0; if (!P.cv.isConnected) return;
   const g = P.cv.getContext('2d'), W = P.cv.width, H = P.cv.height, N = PAD.cells, st = S[P.k], cw = W/N, ch = H/N, d = window.devicePixelRatio || 1;
-  const col = st.pad ? padColor(padWeights(st.pad)) : '#15171C'; let active = false;
+  const col = st.pad ? padColor(padWeights(st.pad)) : '#000000'; let active = false;
   g.clearRect(0, 0, W, H);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++){ const n = j*N + i, cx = (i + 0.5)/N*2 - 1, cy = 1 - (j + 0.5)/N*2;
     const d2 = st.pad ? (cx - st.pad.x)**2 + (cy - st.pad.y)**2 : 9;
@@ -940,7 +991,7 @@ function drawPad(ts){
     else P.e[n] = Math.max(P.e[n]*0.94, 0.5*Math.exp(-d2/0.03));
     if (P.e[n] > 0.02 && (P.down || P.e[n] > 0.5*Math.exp(-d2/0.03) + 0.01)) active = true;
     const x0 = i*cw, y0 = j*ch, m = cw*0.14, s = cw - 2*m, X = x0 + m, Y = y0 + m, e = P.e[n];
-    g.fillStyle = 'rgba(21,23,28,.075)'; g.fillRect(X, Y, s, s);
+    g.fillStyle = 'rgba(0,0,0,.075)'; g.fillRect(X, Y, s, s);
     const lvl = e + (st.pad ? 0.08 : 0); if (lvl < 0.12) continue;
     g.fillStyle = col; g.globalAlpha = Math.min(1, 0.35 + lvl);
     if (lvl < 0.3){ const r = s*0.13; g.fillRect(X + s/2 - r, Y + s/2 - r, 2*r, 2*r); }
@@ -948,8 +999,8 @@ function drawPad(ts){
     else if (lvl < 0.8){ const t = s*0.18; g.save(); g.translate(X + s/2, Y + s/2); g.rotate(Math.PI/4); g.fillRect(-s*0.4, -t/2, s*0.8, t); g.fillRect(-t/2, -s*0.4, t, s*0.8); g.restore(); }
     else g.fillRect(X, Y, s, s);
     g.globalAlpha = 1; }
-  if (st.pad){ const px = (st.pad.x + 1)/2*W, py = (1 - st.pad.y)/2*H; g.strokeStyle = '#15171C'; g.lineWidth = 2*d;
-    g.strokeRect(px - cw*0.55, py - ch*0.55, cw*1.1, ch*1.1); g.fillStyle = '#15171C'; g.fillRect(px - d, 0, 2*d, H*0.012 + 4*d); g.fillRect(px - d, H - H*0.012 - 4*d, 2*d, H*0.012 + 4*d); g.fillRect(0, py - d, W*0.012 + 4*d, 2*d); g.fillRect(W - W*0.012 - 4*d, py - d, W*0.012 + 4*d, 2*d); }
+  if (st.pad){ const px = (st.pad.x + 1)/2*W, py = (1 - st.pad.y)/2*H; g.strokeStyle = '#000000'; g.lineWidth = 2*d;
+    g.strokeRect(px - cw*0.55, py - ch*0.55, cw*1.1, ch*1.1); g.fillStyle = '#000000'; g.fillRect(px - d, 0, 2*d, H*0.012 + 4*d); g.fillRect(px - d, H - H*0.012 - 4*d, 2*d, H*0.012 + 4*d); g.fillRect(0, py - d, W*0.012 + 4*d, 2*d); g.fillRect(W - W*0.012 - 4*d, py - d, W*0.012 + 4*d, 2*d); }
   if (active || P.down) P.raf = requestAnimationFrame(drawPad);
 }
 
@@ -959,12 +1010,12 @@ const TONICA_MIX = -9;
    21 tacche, una manopola che si trascina, i segmenti accesi tra l'origine e la manopola. */
 function liveMaster(){ const L = playing && playing.live.master; if (!L || !ctx) return; const T = tempParams(M.temp);
   setG(L.ls.gain, T.ls, ctx); setG(L.hs.gain, T.hs, ctx); setG(L.hs.frequency, T.hf, ctx); setG(L.mg.gain, dB(M.vol), ctx); }
-const ICO_SNOW = '<svg viewBox="0 0 24 24" aria-hidden="true" id="icoSnow"><g stroke="#15171C" stroke-width="2.2" stroke-linecap="square" fill="none"><path d="M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10"/><path d="M9 3.6l3 2.4 3-2.4M9 20.4l3-2.4 3 2.4M3.8 10.4l3.6-.8-1-3.5M20.2 13.6l-3.6.8 1 3.5M3.8 13.6l3.6.8-1 3.5M20.2 10.4l-3.6-.8 1-3.5"/></g></svg>';
-const ICO_SUN = '<svg viewBox="0 0 24 24" aria-hidden="true" id="icoSun"><g stroke="#15171C" stroke-width="2.2" stroke-linecap="square" fill="none"><circle cx="12" cy="12" r="4.3"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></g></svg>';
-const ICO_SPK_LO = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#15171C" stroke-width="2.2" stroke-linecap="square" fill="none"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M16 10v4"/></g></svg>';
-const ICO_SPK_HI = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#15171C" stroke-width="2.2" stroke-linecap="square" fill="none"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M16 10v4M19 7.5v9M22 5v14"/></g></svg>';
-const ICO_DRY = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#15171C"><rect x="10" y="5" width="4" height="14"/></g></svg>';
-const ICO_ECO = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#15171C"><rect x="2" y="5" width="4" height="14"/><rect x="9" y="7" width="3.4" height="10" opacity=".7"/><rect x="15" y="9" width="2.8" height="6" opacity=".45"/><rect x="20.5" y="10.5" width="2" height="3" opacity=".25"/></g></svg>';
+const ICO_SNOW = '<svg viewBox="0 0 24 24" aria-hidden="true" id="icoSnow"><g stroke="#000000" stroke-width="2.2" stroke-linecap="square" fill="none"><path d="M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10"/><path d="M9 3.6l3 2.4 3-2.4M9 20.4l3-2.4 3 2.4M3.8 10.4l3.6-.8-1-3.5M20.2 13.6l-3.6.8 1 3.5M3.8 13.6l3.6.8-1 3.5M20.2 10.4l-3.6-.8 1-3.5"/></g></svg>';
+const ICO_SUN = '<svg viewBox="0 0 24 24" aria-hidden="true" id="icoSun"><g stroke="#000000" stroke-width="2.2" stroke-linecap="square" fill="none"><circle cx="12" cy="12" r="4.3"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></g></svg>';
+const ICO_SPK_LO = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#000000" stroke-width="2.2" stroke-linecap="square" fill="none"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M16 10v4"/></g></svg>';
+const ICO_SPK_HI = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#000000" stroke-width="2.2" stroke-linecap="square" fill="none"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M16 10v4M19 7.5v9M22 5v14"/></g></svg>';
+const ICO_DRY = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#000000"><rect x="10" y="5" width="4" height="14"/></g></svg>';
+const ICO_ECO = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#000000"><rect x="2" y="5" width="4" height="14"/><rect x="9" y="7" width="3.4" height="10" opacity=".7"/><rect x="15" y="9" width="2.8" height="6" opacity=".45"/><rect x="20.5" y="10.5" width="2" height="3" opacity=".25"/></g></svg>';
 function tempText(){ const t = M.temp; return Math.abs(t) < 0.05 ? 'neutra' : (t < 0 ? 'fredda ' : 'calda ') + Math.round(Math.abs(t)*100) + '%'; }
 const FS_N = 21;
 function SL(id){ const [kind, k] = id.split('-');
@@ -983,7 +1034,7 @@ function updateSl(id){ const el = $('sl-' + id); if (!el) return; const c = SL(i
   el.setAttribute('aria-valuenow', String(Math.round(v*100)/100)); el.setAttribute('aria-valuetext', c.text()); $('v-' + id).textContent = c.text(); }
 function setSl(id, v){ const c = SL(id); if (c.dis) return; v = Math.round(Math.max(c.min, Math.min(c.max, v))/c.step)*c.step; v = Math.round(v*100)/100; if (v === c.get()) return; c.set(v); updateSl(id); }
 const mixIds = () => KEYS.flatMap((k) => ['level-' + k, 'send-' + k]).concat(['temp', 'master']);
-function mixerHtml(){ return KEYS.map((k) => { const sh = shapeOf(k); return '<div class="mgrp' + (S[k].raw ? '' : ' dis') + '"><div class="mhead">' + (sh ? svgShape(sh.poly, sh.color, 14) : '') + SEC[k].name + '<small>' + (S[k].raw ? effLabel(k) : 'nessun suono') + '</small></div>' + fslHtml('level-' + k) + fslHtml('send-' + k) + '</div>'; }).join('')
+function mixerHtml(){ return KEYS.map((k) => { const sh = shapeOf(k); return '<div class="mgrp' + (S[k].raw ? '' : ' dis') + '"><div class="mhead">' + secIcon(k, 14, 'var(' + SEC[k].acc + ')') + SEC[k].name + '<small>' + (S[k].raw ? effLabel(k) : 'nessun suono') + '</small></div>' + fslHtml('level-' + k) + fslHtml('send-' + k) + '</div>'; }).join('')
   + '<div class="mgrp"><div class="mhead">Tutta la composizione</div>' + fslHtml('temp') + fslHtml('master') + '</div>'; }
 function liveTrack(k){ const L = playing && playing.live[k]; if (!L || !ctx) return; const st = S[k]; setG(L.track.gain, trackGain(st), ctx); setG(L.send.gain, st.send*SEND, ctx); }
 $('lcdBody').addEventListener('pointerdown', (ev) => { const el = ev.target.closest('.fsl'); if (!el || el.classList.contains('dis')) return; ev.preventDefault(); const id = el.dataset.sl, trk = el.querySelector('.trk');
