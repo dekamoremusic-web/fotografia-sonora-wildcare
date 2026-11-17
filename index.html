@@ -102,6 +102,7 @@ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .city{width:100%;aspect-ratio:2/1.15;display:block}
 .plot{width:100%;aspect-ratio:1.25;display:block;flex:none;image-rendering:pixelated}
 .dm{width:100%;aspect-ratio:2/1;display:block;flex:none}
+.map{width:100%;aspect-ratio:1;display:block;flex:none;border:1px solid var(--ink)}
 .recbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .padwrap{position:relative;width:100%;max-width:min(100%,40vh,40dvh);margin:0 auto;padding:16px}
 .lcd[data-step=effetto] h2{font-size:16px;line-height:1.25}
@@ -770,6 +771,74 @@ const SEC_ICON = {
 function secIcon(k, size, color){ return '<svg class="secico" width="' + size + '" height="' + size + '" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true" style="color:' + (color || 'currentColor') + '">'
   + SEC_ICON[k].map(([x, y, w, h]) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="currentColor"/>').join('') + '</svg>'; }
 
+
+/* ======================= POSIZIONE E MAPPA PERSONALE ======================= */
+/* A ogni registrazione (o file caricato) si chiede la posizione al browser. Resta sul telefono: va solo
+   nell'archivio scaricato. La mappa è disegnata sullo schermo LCD, senza mappe esterne. */
+const SEC_HEX = { tonica: '#BE08E2', segnale: '#0FAE0B', impronta: '#E0532C' };
+let geoDenied = false;
+function requestGeo(k){ const st = S[k]; st.geo = null; st.geoState = 'attesa'; st.geoReq = (st.geoReq || 0) + 1; const id = st.geoReq;
+  if (!navigator.geolocation || geoDenied){ st.geoState = 'no'; updateGeoLine(); return; }
+  updateGeoLine();
+  navigator.geolocation.getCurrentPosition((p) => { if (S[k].geoReq !== id) return;
+      S[k].geo = { lat: p.coords.latitude, lon: p.coords.longitude, acc: Math.max(1, Math.round(p.coords.accuracy)), t: new Date(p.timestamp || Date.now()).toISOString() };
+      S[k].geoState = 'ok'; prepared = null; updateGeoLine(); if (STEPS[step].t === 'lascia'){ drawMapLive(); refreshSave(); } },
+    (e) => { if (S[k].geoReq !== id) return; S[k].geoState = 'no'; if (e && e.code === 1){ geoDenied = true; setStatus('Senza posizione: questo suono non sarà sulla mappa'); } updateGeoLine(); },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 3000 }); }
+function geoText(k){ const st = S[k]; if (st.geo) return 'Posizione ±' + st.geo.acc + ' m'; if (st.geoState === 'attesa') return 'Cerco la posizione…'; if (st.geoState === 'no') return 'Posizione non disponibile'; return ''; }
+function updateGeoLine(){ const el = $('geo'); const s = STEPS[step]; if (el && s.k) el.textContent = geoText(s.k); }
+function geoPts(){ return KEYS.filter((k) => S[k].raw && S[k].geo).map((k) => ({ k, ...S[k].geo })); }
+function niceStep(m){ for (const v of [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000]) if (v >= m) return v; return 10000; }
+/* disegno della mappa: punti, cerchi di precisione, linea nell'ordine del percorso, etichetta con sezione e forma */
+function drawMap(cv, Wc, Hc, dpr){
+  const W = Math.round(Wc*dpr), H = Math.round(Hc*dpr); if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+  const g = cv.getContext('2d'), d = dpr; g.clearRect(0, 0, W, H); g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(0,0,0,.08)'; const st6 = 7*d; for (let y = st6/2; y < H; y += st6) for (let x = st6/2; x < W; x += st6) g.fillRect(x - d/2, y - d/2, d, d);
+  const pts = geoPts(); g.textBaseline = 'middle';
+  if (!pts.length){ g.fillStyle = '#000'; g.font = 'italic ' + (13*d) + 'px Iosevka, ui-monospace, monospace'; g.textAlign = 'center';
+    g.fillText('Nessuna posizione registrata', W/2, H/2 - 9*d); g.fillStyle = '#4A4A4A'; g.font = (11.5*d) + 'px Inter, system-ui, sans-serif'; g.fillText('La posizione si chiede quando premi Rec', W/2, H/2 + 11*d); return; }
+  const lat0 = pts.reduce((a, p) => a + p.lat, 0)/pts.length, lon0 = pts.reduce((a, p) => a + p.lon, 0)/pts.length, kx = 111320*Math.cos(lat0*Math.PI/180), ky = 110540;
+  const P = pts.map((p) => ({ ...p, x: (p.lon - lon0)*kx, y: (p.lat - lat0)*ky }));
+  let ext = 0; for (const p of P) ext = Math.max(ext, Math.abs(p.x), Math.abs(p.y)); const half = Math.max(40, ext*1.35 + 15), pad = 34*d, s = (Math.min(W, H)/2 - pad)/half;
+  const sx = (p) => W/2 + p.x*s, sy = (p) => H/2 - p.y*s;
+  // precisione: cerchio tratteggiato
+  g.setLineDash([2*d, 3*d]); g.lineWidth = d; g.strokeStyle = 'rgba(0,0,0,.35)';
+  for (const p of P){ const r = Math.min(p.acc*s, Math.max(W, H)); if (r > 6*d){ g.beginPath(); g.arc(sx(p), sy(p), r, 0, 2*Math.PI); g.stroke(); } }
+  // percorso: tonica → segnale → impronta
+  if (P.length > 1){ g.setLineDash([3*d, 3*d]); g.lineWidth = 2*d; g.strokeStyle = '#000'; g.beginPath(); P.forEach((p, i) => i ? g.lineTo(sx(p), sy(p)) : g.moveTo(sx(p), sy(p))); g.stroke(); }
+  g.setLineDash([]);
+  // punti ed etichette (spostate se due punti sono troppo vicini)
+  const placed = [];
+  P.forEach((p, i) => { const x = sx(p), y = sy(p), alpha = S[p.k].keep ? 1 : 0.35, sz = 16*d; g.globalAlpha = alpha;
+    g.fillStyle = '#FFFFFF'; g.fillRect(x - sz/2 - 2*d, y - sz/2 - 2*d, sz + 4*d, sz + 4*d);
+    g.fillStyle = SEC_HEX[p.k]; for (const [rx, ry, rw, rh] of SEC_ICON[p.k]) g.fillRect(x - sz/2 + rx/12*sz, y - sz/2 + ry/12*sz, rw/12*sz, rh/12*sz);
+    const sh = shapeOf(p.k), post = sh ? POSTURE[sh.sides].n : '', label = SEC[p.k].name.split(' ')[0] + ' · ' + post;
+    let ly = y; for (const q of placed) if (Math.abs(q.y - ly) < 30*d && Math.abs(q.x - x) < 170*d) ly = q.y + 30*d;
+    placed.push({ x, y: ly }); const right = x < W*0.6, lx = right ? x + sz/2 + 8*d : x - sz/2 - 8*d;
+    g.font = 'italic ' + (12*d) + 'px Iosevka, ui-monospace, monospace'; const tw = g.measureText(label).width, mw = 14*d, bw = tw + mw + 10*d, bx = right ? lx : lx - bw;
+    if (ly !== y){ g.strokeStyle = '#000'; g.lineWidth = d; g.beginPath(); g.moveTo(x, y); g.lineTo(right ? bx : bx + bw, ly); g.stroke(); }
+    g.fillStyle = '#FFFFFF'; g.fillRect(bx, ly - 10*d, bw, 20*d); g.strokeStyle = '#000'; g.lineWidth = d; g.strokeRect(bx + d/2, ly - 10*d + d/2, bw - d, 20*d - d);
+    // forma della postura: quadrato (sgabello) o triangolo (cono), in stile LCD
+    if (sh){ const pts2 = SHAPES[sh.poly].split(' ').map((q) => q.split(',').map(Number)), ox = bx + 5*d, oy = ly - 6*d, sc = 12*d/24;
+      g.beginPath(); pts2.forEach(([a, b], j) => j ? g.lineTo(ox + a*sc, oy + b*sc) : g.moveTo(ox + a*sc, oy + b*sc)); g.closePath(); g.lineWidth = 1.6*d; g.stroke(); }
+    g.fillStyle = '#000'; g.textAlign = 'left'; g.fillText(label, bx + mw + 6*d, ly + d);
+    g.globalAlpha = 1; });
+  // scala e nord
+  const target = (W*0.28)/s, step = niceStep(target), len = step*s, x0 = 12*d, y0 = H - 14*d;
+  g.fillStyle = '#000'; g.fillRect(x0, y0, len, 2*d); g.fillRect(x0, y0 - 5*d, 2*d, 7*d); g.fillRect(x0 + len - 2*d, y0 - 5*d, 2*d, 7*d);
+  g.font = (11*d) + 'px Inter, system-ui, sans-serif'; g.textAlign = 'left'; g.fillText(step >= 1000 ? (step/1000) + ' km' : step + ' m', x0 + len + 6*d, y0);
+  g.textAlign = 'center'; g.font = '600 ' + (12*d) + 'px Inter, system-ui, sans-serif'; g.fillText('N', W - 22*d, 32*d);
+  g.beginPath(); g.moveTo(W - 22*d, 10*d); g.lineTo(W - 27*d, 21*d); g.lineTo(W - 17*d, 21*d); g.closePath(); g.fill(); }
+function drawMapLive(){ const cv = $('map'); if (!cv) return; const r = cv.getBoundingClientRect(); drawMap(cv, r.width, r.height, window.devicePixelRatio || 1);
+  const pts = geoPts(); cv.setAttribute('aria-label', pts.length ? 'Mappa dei tuoi suoni: ' + pts.map((p) => SEC[p.k].name + ' registrata con ' + (shapeOf(p.k) ? POSTURE[shapeOf(p.k).sides].n.toLowerCase() : 'nessuna forma') + ', precisione ' + p.acc + ' metri').join('; ') : 'Mappa dei tuoi suoni: nessuna posizione registrata'); }
+function mapPng(){ return new Promise((res) => { const cv = document.createElement('canvas'); drawMap(cv, 540, 540, 2); cv.toBlob((b) => b ? b.arrayBuffer().then((a) => res(new Uint8Array(a))) : res(null), 'image/png'); }); }
+function geojson(){ const pts = geoPts(), f = pts.map((p) => { const sh = shapeOf(p.k);
+    return { type: 'Feature', geometry: { type: 'Point', coordinates: [+p.lon.toFixed(6), +p.lat.toFixed(6)] },
+      properties: { sezione: SEC[p.k].name, forma: sh ? POSTURE[sh.sides].n : null, postura: sh ? POSTURE[sh.sides].t : null, impressione: effLabel(p.k), suggerimento: sh && S[p.k].task != null ? sh.tasks[S[p.k].task] : null,
+        precisione_m: p.acc, ora: p.t, file: SEC[p.k].n + '_' + p.k + '.wav', lasciata: !!S[p.k].keep } }; });
+  if (pts.length > 1) f.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: pts.map((p) => [+p.lon.toFixed(6), +p.lat.toFixed(6)]) }, properties: { percorso: pts.map((p) => SEC[p.k].name).join(' → ') } });
+  return { type: 'FeatureCollection', features: f }; }
+
 /* ======================= PERCORSO ======================= */
 const STEPS = [{ t: 'intro' }];
 for (const k of KEYS) STEPS.push({ t: 'forma', k }, { t: 'registra', k }, { t: 'effetto', k });
@@ -833,7 +902,7 @@ function render(){
     if (st.task == null || st.task >= sh.tasks.length) st.task = Math.floor(Math.random()*sh.tasks.length);
     h = '<h2 id="scr-title" class="mono">Il tuo suggerimento</h2><p class="quote">' + sh.tasks[st.task] + '</p>'
       + '<canvas class="city" id="city" role="img" aria-label="Forma d’onda del suono, disegnata come una città"></canvas>'
-      + '<div class="recbar"><span id="timer">' + seg7(recState ? '00:00' : st.raw ? '00:' + pad2(Math.round(st.raw.length/SR)) : '00:00', 22) + '</span><span class="mono" id="meta" style="text-align:right">' + (st.raw ? esc(st.name) : 'Nessun suono') + '</span></div>'
+      + '<div class="recbar"><span id="timer">' + seg7(recState ? '00:00' : st.raw ? '00:' + pad2(Math.round(st.raw.length/SR)) : '00:00', 22) + '</span><span class="mono" id="meta" style="text-align:right">' + (st.raw ? esc(st.name) : 'Nessun suono') + '<br><span id="geo">' + geoText(k) + '</span></span></div>'
       + '<div class="row"><button class="lcdbtn" type="button" data-act="file">Carica un file</button><button class="lcdbtn" type="button" data-act="example">Usa l’esempio</button></div>';
     foot = recState ? 'Sto registrando · Rec per fermare' : st.raw ? 'Play per ascoltare · Avanti per continuare' : 'Premi Rec per registrare · Massimo 20 s';
   }
@@ -854,6 +923,7 @@ function render(){
     h = '<h2 id="scr-title">Scegli cosa lasciare a questo luogo</h2><p class="txt">Le parti che lasci formano l’impressione sonora del posto.</p><div class="legend">'
       + KEYS.map((kk) => { const s2 = S[kk], sh = shapeOf(kk); return '<button class="sel" type="button" data-act="keep" data-k="' + kk + '" aria-pressed="' + (s2.keep && !!s2.raw) + '"' + (s2.raw ? '' : ' disabled') + '>' + secIcon(kk, 28)
         + '<span class="t"><b>' + SEC[kk].n + ' · ' + SEC[kk].name + '</b><small>' + (s2.raw ? effLabel(kk) : 'Nessun suono registrato') + '</small></span><span class="led"></span></button>'; }).join('') + '</div>'
+      + '<div class="mono">La tua mappa</div><canvas class="map" id="map" role="img" aria-label="Mappa dei tuoi suoni"></canvas>'
       + '<div id="saveArea">' + saveHtml() + '</div>';
     foot = 'Play per ascoltare ciò che lasci';
   }
@@ -865,6 +935,7 @@ function render(){
   if ($('pad')) initPad(k); else padState = null;
   if ($('dm')) dmShow(st.shape ? shapeKind(k, st.shape) : null, false);
   if (s.t === 'mixer') mixIds().forEach(updateSl);
+  if ($('map')) drawMapLive();
   if ($('plot')) plotStart(); else plotStop();
   wheelAria();
 }
@@ -1091,7 +1162,7 @@ function chooseShape(k, id){ const st = S[k]; st.shape = id; st.task = Math.floo
 $('lcdBody').addEventListener('click', (ev) => {
   const b = ev.target.closest('[data-act]'); if (!b || b.disabled) return; const s = STEPS[step], act = b.dataset.act;
   if (act === 'shape'){ if (S[s.k].shape !== b.dataset.v) chooseShape(s.k, b.dataset.v); }
-  else if (act === 'example'){ setSample(s.k, synth(s.k), EXNAME[s.k]); render(); if (playing) playRaw(s.k); }
+  else if (act === 'example'){ setSample(s.k, synth(s.k), EXNAME[s.k]); requestGeo(s.k); render(); if (playing) playRaw(s.k); }
   else if (act === 'quick') quickFill();
   else if (act === 'file') openPicker();
   else if (act === 'sfx'){ SFX.set(!SFX.on); b.textContent = 'Suoni dei tasti: ' + (SFX.on ? 'sì' : 'no'); b.setAttribute('aria-pressed', String(SFX.on)); }
@@ -1102,7 +1173,7 @@ $('lcdBody').addEventListener('click', (ev) => {
 });
 $('lcdBody').addEventListener('scroll', () => { if (SCROLLS(STEPS[step].t)) setLeds(false); }, { passive: true });
 $('file-in').addEventListener('change', async (ev) => { const t = ev.target, f = t.files && t.files[0]; if (!f) return; const k = STEPS[step].k; if (!k) return; setStatus('Apro ' + f.name + '…');
-  try { setSample(k, await decodeToMono(await f.arrayBuffer()), f.name); render(); if (playing) playRaw(k); setStatus('Caricato: ' + f.name); }
+  try { setSample(k, await decodeToMono(await f.arrayBuffer()), f.name); requestGeo(k); render(); if (playing) playRaw(k); setStatus('Caricato: ' + f.name); }
   catch (e) { setStatus('Il file non si apre: prova WAV, MP3 o M4A', true); } t.value = ''; });
 async function decodeToMono(ab){ const c = ensureCtx(), buf = await c.decodeAudioData(ab), n = buf.length, x = new Float32Array(n);
   for (let ch = 0; ch < buf.numberOfChannels; ch++){ const dd = buf.getChannelData(ch); for (let i = 0; i < n; i++) x[i] += dd[i]/buf.numberOfChannels; } return x; }
@@ -1139,7 +1210,7 @@ async function record(k){
     rec.onstop = async () => { stream.getTracks().forEach((t) => t.stop()); try { srcN.disconnect(); } catch (e) {} clearInterval(recState.iv); clearTimeout(recState.timer); recState = null;
       try { setSample(k, await decodeToMono(await new Blob(chunks).arrayBuffer()), 'Registrazione delle ' + new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })); render(); setStatus('Registrazione pronta'); }
       catch (e) { render(); setStatus('La registrazione non si decodifica in questo browser', true); } };
-    stop(); rec.start();
+    stop(); requestGeo(k); rec.start();
     recState = { k, rec, levels: [], timer: setTimeout(() => rec.state === 'recording' && rec.stop(), REC_MAX*1000),
       iv: setInterval(() => { an.getFloatTimeDomainData(buf); let s = 0; for (const v of buf) s += v*v; acc += Math.sqrt(s/buf.length); cnt++;
         const el = performance.now() - t0, sl = Math.floor(el/slot);
@@ -1155,14 +1226,14 @@ function quickFill(){
   const pos = { tonica: { x: 0, y: 0.9 }, segnale: { x: 0.9, y: 0 }, impronta: { x: -0.85, y: 0.2 } };
   KEYS.forEach((k) => { const st = S[k]; st.shape = SEC[k].shapes[0].id; st.task = 0; st.pad = pos[k]; setSample(k, synth(k), EXNAME[k]); const dm = padDominant(padWeights(st.pad)); st.eff = dm === 'D' ? null : dm; });
   stop(); go(STEPS.findIndex((x) => x.t === 'mixer')); }
-window.addEventListener('resize', () => { if (dmState) dmDraw(performance.now()); if (padState){ sizePad(); kickPad(); } if ($('city')) drawCityFor(STEPS[step].k); });
+window.addEventListener('resize', () => { if ($('map')) drawMapLive(); if (dmState) dmDraw(performance.now()); if (padState){ sizePad(); kickPad(); } if ($('city')) drawCityFor(STEPS[step].k); });
 
 /* ======================= SALVATAGGIO ======================= */
 /* In due tempi: prima si prepara l'archivio (calcolo lungo), poi un secondo tocco lo salva.
    Il secondo tocco serve ai browser del telefono, che accettano un download solo come risposta immediata a un gesto. */
 let downloads = null, downloadsChecked = false, prepared = null, busy = false;
 if (IN_VIEWER && window.claude.use) window.claude.use('downloads').then((dl) => { downloads = dl; downloadsChecked = true; if (STEPS[step].t === 'lascia') render(); }).catch(() => { downloadsChecked = true; });
-function exportSig(){ return JSON.stringify([KEYS.map((k) => { const st = S[k]; return [st.ver, st.keep, st.eff, st.pad, st.level, st.mix, st.send, st.mute]; }), M]); }
+function exportSig(){ return JSON.stringify([KEYS.map((k) => { const st = S[k]; return [st.ver, st.keep, st.eff, st.pad, st.level, st.mix, st.send, st.mute, st.geo]; }), M]); }
 function canShareFiles(){ try { return !IN_VIEWER && !!navigator.canShare && navigator.canShare({ files: [new File([new Uint8Array(1)], 'x.zip', { type: 'application/zip' })] }); } catch (e) { return false; } }
 function saveHtml(){
   if (prepared && prepared.sig !== exportSig()) prepared = null;
@@ -1193,8 +1264,10 @@ async function exportZip(){
     for (const k of KEYS){ const st = S[k], sh = shapeOf(k);
       info[k] = { lasciata: st.keep && !!st.raw, forma: sh ? POSTURE[sh.sides].n : null, postura: sh ? POSTURE[sh.sides].t : null, suggerimento: sh && st.task != null ? sh.tasks[st.task] : null, sorgente: st.name,
         impressione: st.raw ? effLabel(k) : null, gesto: st.pad ? { x: +st.pad.x.toFixed(2), y: +st.pad.y.toFixed(2), pesi: Object.fromEntries(Object.entries(padWeights(st.pad)).map(([v, w]) => [padOpt(k, v).s, +w.toFixed(2)])) } : null,
-        intensita: st.mix, livello_dB: st.level, eco: st.send, muto: st.level <= LV_MIN }; }
+        intensita: st.mix, livello_dB: st.level, eco: st.send, muto: st.level <= LV_MIN,
+        posizione: st.geo ? { lat: +st.geo.lat.toFixed(6), lon: +st.geo.lon.toFixed(6), precisione_m: st.geo.acc, ora: st.geo.t } : null }; }
     files.push({ name: 'scelte.json', data: new TextEncoder().encode(JSON.stringify(info, null, 2)) });
+    if (geoPts().length){ files.push({ name: 'mappa.geojson', data: new TextEncoder().encode(JSON.stringify(geojson(), null, 2)) }); const png = await mapPng(); if (png) files.push({ name: 'mappa.png', data: png }); }
     const dt = new Date(), stamp = dt.getFullYear() + pad2(dt.getMonth() + 1) + pad2(dt.getDate()) + '-' + pad2(dt.getHours()) + pad2(dt.getMinutes());
     prepared = { blob: zip(files), fname: 'impressione-sonora-' + stamp + '.zip', sig: exportSig() };
     busy = false; refreshSave(); setStatus('Archivio pronto: tocca Salva'); SFX.play('done');
