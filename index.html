@@ -571,12 +571,23 @@ const MAKEUP = { 'tonica.A': 1.9, 'tonica.B': 2.6, 'tonica.C': 1.9 };
 function setMixGains(st, origG, transGs, c){ const ws = stWeights(st), key = KEYS.find((k) => S[k] === st); let tot = 0;
   for (const v in transGs){ const g = st.mix*(ws[v] || 0); tot += g; setG(transGs[v].gain, g*(MAKEUP[key + '.' + v] || 1), c); }
   setG(origG.gain, Math.max(0, 1 - tot), c); }
-/* master: tracce → [delay in feedback condiviso, solo ripetizioni] → temperatura (shelving) → volume → limitatore */
+/* master: tracce → [delay in feedback condiviso, solo ripetizioni] → headroom → temperatura (shelving) → volume
+   → compressore di colla → limitatore → clip di sicurezza.
+   Il DynamicsCompressor del browser aggiunge da solo un guadagno di compensazione (0,6 × la riduzione a 0 dBFS):
+   lo togliamo con un trim, così compressore e limitatore riducono i picchi senza alzare il livello. */
+const MASTER_HEADROOM = -6, MASTER_MAKEUP = 7;
+function dyn(c, thr, ratio, knee, att, rel){ const cp = c.createDynamicsCompressor(); cp.threshold.value = thr; cp.ratio.value = ratio; cp.knee.value = knee; cp.attack.value = att; cp.release.value = rel;
+  const makeup = 0.6*(-thr - (-thr)/ratio), out = gn(c, dB(-makeup)); cp.connect(out); return { i: cp, o: out }; }
+let SAFE = null;
+function safeClip(c){ const ws = c.createWaveShaper(); if (!SAFE){ const N = 4096, T = 0.8, M = 0.93; SAFE = new Float32Array(N);
+    for (let k = 0; k < N; k++){ const x = k/(N - 1)*2 - 1, a = Math.abs(x); SAFE[k] = Math.sign(x)*(a <= T ? a : T + (M - T)*Math.tanh((a - T)/(M - T))); } }
+  ws.curve = SAFE; ws.oversample = '4x'; return ws; }
 function buildAll(c, dest, keys, opts){
   irs(); opts = opts || {};
-  const lim = c.createDynamicsCompressor(); lim.threshold.value = -3; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.1; lim.knee.value = 0; lim.connect(dest);
-  const T = tempParams(M.temp), mg = gn(c, dB(M.vol)), ls = biq(c, 'lowshelf', 250, null, T.ls), hs = biq(c, 'highshelf', T.hf, null, T.hs), mIn = gn(c, 1);
-  chainNodes(mIn, ls, hs, mg, lim);
+  const glue = dyn(c, -22, 2.5, 8, 0.02, 0.25), lim = dyn(c, -3, 20, 0, 0.001, 0.08), clip = safeClip(c);
+  chainNodes(glue.o, gn(c, dB(MASTER_MAKEUP)), lim.i); chainNodes(lim.o, clip, dest);
+  const T = tempParams(M.temp), mg = gn(c, dB(M.vol)), ls = biq(c, 'lowshelf', 250, null, T.ls), hs = biq(c, 'highshelf', T.hf, null, T.hs), mIn = gn(c, dB(MASTER_HEADROOM));
+  chainNodes(mIn, ls, hs, mg, glue.i);
   const dIn = gn(c, 1), d = c.createDelay(2); d.delayTime.value = 0.42; dIn.connect(d); d.connect(onePole(c, 3000)).connect(gn(c, 0.55)).connect(d); d.connect(mIn);
   const t0 = c.currentTime + 0.05, stops = [], live = { master: { ls, hs, mg } };
   for (const k of keys) if (S[k].raw) stops.push(...buildSlot(c, k, mIn, t0, live, dIn, opts.ignoreMute, opts.liveEdit));
@@ -646,7 +657,8 @@ const SFX = (() => {
     boot(){ [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0.07, { when: 0.06*i, vol: 0.4 })); },
     done(){ [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.09, { when: 0.07*i, vol: 0.5 })); }
   };
-  return { play(n, a){ try { if (on && P[n] && !(typeof STEPS !== 'undefined' && STEPS[step] && STEPS[step].t === 'mixer')) P[n](a); } catch (e) {} },
+  /* niente bip nel mixer e nessun tick della rotella mentre un suono è in ascolto: coprirebbero quello che si sta ascoltando */
+  return { play(n, a){ try { if (on && P[n] && !(typeof STEPS !== 'undefined' && STEPS[step] && STEPS[step].t === 'mixer') && !(n === 'tick' && playing)) P[n](a); } catch (e) {} },
     set(v){ on = v; try { localStorage.setItem('fs-suoni', v ? '1' : '0'); } catch (e) {} if (v) P.select(); },
     get on(){ return on; } };
 })();
@@ -1144,7 +1156,7 @@ function wheelStep(dir){
   if (SCROLLS(s.t)){ const b = $('lcdBody'), before = b.scrollTop; b.scrollBy({ top: dir*56, behavior: REDUCED ? 'auto' : 'smooth' }); setTimeout(() => setLeds(false), 260); if (Math.abs(b.scrollHeight - b.clientHeight) < 2 || (dir < 0 && before <= 0) || (dir > 0 && before >= b.scrollHeight - b.clientHeight - 1)) SFX.play('blip'); else SFX.play('tick', scrollLevel()); }
   else if (s.t === 'forma'){ const sh = SEC[s.k].shapes, st = S[s.k], i = sh.findIndex((x) => x.id === st.shape), ni = i < 0 ? 0 : Math.max(0, Math.min(sh.length - 1, i - dir));
     if (sh[ni].id !== st.shape) chooseShape(s.k, sh[ni].id); else SFX.play('tick', wheelLevel()); }
-  else if (s.t === 'effetto'){ const st = S[s.k]; st.mix = Math.round(Math.max(0, Math.min(1, st.mix + dir*0.05))*100)/100; liveMix(s.k); updateReadout(); SFX.play('tick', st.mix); }
+  else if (s.t === 'effetto'){ const st = S[s.k]; st.mix = Math.round(Math.max(0, Math.min(1, st.mix + dir*0.05))*100)/100; liveMix(s.k); updateReadout(); }
   setLeds(true); wheelAria(); }
 function chooseShape(k, id){ const st = S[k]; st.shape = id; st.task = Math.floor(Math.random()*shapeOf(k).tasks.length);
   document.querySelectorAll('[data-act=shape]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === id)));
