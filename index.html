@@ -1227,30 +1227,54 @@ $('kRec').addEventListener('click', () => { if ($('kRec').getAttribute('aria-dis
 document.querySelectorAll('.key').forEach((k) => { k.addEventListener('pointerdown', () => { try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {} }); k.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') k.classList.add('down'); }); k.addEventListener('keyup', () => k.classList.remove('down')); k.addEventListener('blur', () => k.classList.remove('down')); });
 
 /* ======================= REGISTRAZIONE ======================= */
-let recState = null, micBlocked = false;
+let recState = null, recStarting = false, micBlocked = false, micCtx = null;
 function openPicker(){ try { $('file-in').click(); } catch (e) {} }
+/* Il misuratore usa un contesto audio a parte, alla frequenza nativa del microfono: molti Android registrano a 48 kHz
+   e alcuni browser rifiutano di collegare il microfono a un contesto a 44,1 kHz (era la causa del selettore di file al posto di Rec). */
+function meterCtx(){ try { if (!micCtx) micCtx = new AudioContext(); if (micCtx.state === 'suspended') micCtx.resume(); return micCtx; } catch (e) { return null; } }
+async function openMic(){
+  try { return await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+  catch (e) { if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) throw e;
+    return await navigator.mediaDevices.getUserMedia({ audio: true }); } }   // alcuni telefoni non accettano i vincoli: si riprova con quelli di base
+function recMime(){ const c = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+  try { for (const m of c) if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; } catch (e) {} return ''; }
 async function record(k){
-  if (recState){ recState.rec.stop(); return; }
-  if (micBlocked){ setStatus('Microfono non disponibile: si apre il selettore del telefono', true); openPicker(); return; }
-  try { if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') throw new Error('unsupported');
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-    const c = ensureCtx(), srcN = c.createMediaStreamSource(stream), an = c.createAnalyser(); an.fftSize = 2048; srcN.connect(an);
-    const rec = new MediaRecorder(stream), chunks = []; rec.ondataavailable = (e) => chunks.push(e.data);
-    const buf = new Float32Array(an.fftSize), t0 = performance.now(), slot = REC_MAX*1000/CITY_N; let acc = 0, cnt = 0, lastSlot = 0;
-    rec.onstop = async () => { stream.getTracks().forEach((t) => t.stop()); try { srcN.disconnect(); } catch (e) {} clearInterval(recState.iv); clearTimeout(recState.timer); recState = null;
-      try { setSample(k, await decodeToMono(await new Blob(chunks).arrayBuffer()), 'Registrazione delle ' + new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })); render(); setStatus('Registrazione pronta'); }
-      catch (e) { render(); setStatus('La registrazione non si decodifica in questo browser', true); } };
-    stop(); requestGeo(k); rec.start();
+  if (recState){ if (recState.rec.state === 'recording') recState.rec.stop(); return; }
+  if (recStarting) return;   // doppio tocco mentre il telefono chiede il permesso
+  // qui siamo ancora dentro il tocco, quindi il selettore di file si apre davvero
+  if (micBlocked){ setStatus('Microfono negato: scegli un file, o abilita il microfono nelle impostazioni del browser', true); openPicker(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined'){
+    micBlocked = true; setStatus(IN_VIEWER ? 'L’app di Claude non concede il microfono: scegli un file' : 'Questo browser non registra: apri il link in Chrome, o scegli un file', true); openPicker(); return; }
+  recStarting = true; setStatus('Consenti il microfono per registrare…');
+  let stream = null;
+  try {
+    stream = await openMic();
+    const mime = recMime(), rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream), chunks = [];
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    let srcN = null, an = null, buf = null; const mc = meterCtx();
+    try { if (mc){ srcN = mc.createMediaStreamSource(stream); an = mc.createAnalyser(); an.fftSize = 2048; srcN.connect(an); buf = new Float32Array(an.fftSize); } }
+    catch (e) { srcN = null; an = null; }   // senza misuratore si registra lo stesso
+    const t0 = performance.now(), slot = REC_MAX*1000/CITY_N; let acc = 0, cnt = 0, lastSlot = 0;
+    rec.onstop = async () => { stream.getTracks().forEach((t) => t.stop()); try { if (srcN) srcN.disconnect(); } catch (e) {}
+      if (recState){ clearInterval(recState.iv); clearTimeout(recState.timer); } recState = null;
+      if (!chunks.length){ render(); setStatus('Registrazione vuota: riprova', true); return; }
+      try { setSample(k, await decodeToMono(await new Blob(chunks, { type: rec.mimeType || mime || '' }).arrayBuffer()), 'Registrazione delle ' + new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })); render(); setStatus('Registrazione pronta'); }
+      catch (e) { render(); setStatus('La registrazione non si decodifica in questo browser: usa Carica un file', true); } };
+    stop(); rec.start(250); requestGeo(k);
     recState = { k, rec, levels: [], timer: setTimeout(() => rec.state === 'recording' && rec.stop(), REC_MAX*1000),
-      iv: setInterval(() => { an.getFloatTimeDomainData(buf); let s = 0; for (const v of buf) s += v*v; acc += Math.sqrt(s/buf.length); cnt++;
-        const el = performance.now() - t0, sl = Math.floor(el/slot);
-        if (sl > lastSlot){ const rms = acc/Math.max(1, cnt), db = 20*Math.log10(rms + 1e-9); recState.levels.push(Math.max(0, Math.min(1, (db + 58)/46))); acc = 0; cnt = 0; lastSlot = sl; drawCityFor(k); }
+      iv: setInterval(() => { if (!recState) return; const el = performance.now() - t0, sl = Math.floor(el/slot);
+        if (an){ an.getFloatTimeDomainData(buf); let s = 0; for (const v of buf) s += v*v; acc += Math.sqrt(s/buf.length); cnt++; }
+        if (sl > lastSlot){ const rms = an ? acc/Math.max(1, cnt) : 0.02, db = 20*Math.log10(rms + 1e-9); recState.levels.push(Math.max(0, Math.min(1, (db + 58)/46))); acc = 0; cnt = 0; lastSlot = sl; drawCityFor(k); }
         const tm = $('timer'); if (tm) tm.innerHTML = seg7('00:' + pad2(Math.min(REC_MAX, Math.floor(el/1000))), 22); }, 50) };
-    render();
+    recStarting = false; render(); setStatus('Sto registrando: tocca Rec per fermare');
   } catch (e) {
-    micBlocked = true;
-    const why = IN_VIEWER ? 'L’app di Claude non concede il microfono' : (e && e.name === 'NotAllowedError') ? 'Permesso del microfono negato' : 'Questo browser non dà accesso al microfono';
-    setStatus(why + ': si apre il selettore del telefono', true); openPicker(); }
+    recStarting = false; if (stream) stream.getTracks().forEach((t) => t.stop()); render();
+    const n = e && e.name;
+    /* fuori dal tocco il selettore di file verrebbe bloccato in silenzio: si indica il pulsante invece di aprirlo */
+    if (n === 'NotAllowedError' || n === 'SecurityError'){ micBlocked = true; setStatus(IN_VIEWER ? 'L’app di Claude non concede il microfono: usa Carica un file' : 'Permesso del microfono negato: usa Carica un file, o abilita il microfono nelle impostazioni del browser', true); }
+    else if (n === 'NotFoundError') setStatus('Nessun microfono trovato: usa Carica un file', true);
+    else if (n === 'NotReadableError') setStatus('Il microfono è occupato da un’altra app: chiudila e riprova', true);
+    else setStatus('Non riesco ad avviare la registrazione (' + (n || 'errore') + '): riprova o usa Carica un file', true); }
 }
 function quickFill(){
   const pos = { tonica: { x: 0, y: 0.9 }, segnale: { x: 0.9, y: 0 }, impronta: { x: -0.85, y: 0.2 } };
